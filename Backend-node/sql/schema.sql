@@ -3,7 +3,7 @@
 -- MySQL 8.0+
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS kotchomnol;
+CREATE DATABASE IF NOT EXISTS kotchomnol
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
@@ -19,6 +19,13 @@ CREATE TABLE users (
     phone_number    VARCHAR(20)     NOT NULL,
     email           VARCHAR(255)    NULL,
     password_hash   VARCHAR(255)    NOT NULL,
+    is_verified     BOOLEAN         NOT NULL DEFAULT FALSE,
+    email_verification_code VARCHAR(255) NULL,
+    email_verification_expires DATETIME NULL,
+    email_verification_attempts INT NOT NULL DEFAULT 0,
+    email_verification_locked_until DATETIME NULL,
+    password_reset_token VARCHAR(255) NULL,
+    password_reset_expires DATETIME NULL,
     created_at      TIMESTAMP       NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP       NULL DEFAULT CURRENT_TIMESTAMP
                                      ON UPDATE CURRENT_TIMESTAMP,
