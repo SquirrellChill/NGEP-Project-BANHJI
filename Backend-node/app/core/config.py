@@ -6,8 +6,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # e.g. mysql+pymysql://user:password@host:3306/banhji
-    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/banhji"
+    # e.g. mysql+pymysql://user:password@host:3306/kotchomnol
+    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/kotchomnol"
 
     SECRET_KEY: str = "change-me"
     ALGORITHM: str = "HS256"
