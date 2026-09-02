@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, TIMESTAMP, func
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -14,26 +14,24 @@ class User(Base):
     email = Column(String(255), nullable=True, unique=True)
     password_hash = Column(String(255), nullable=False)
 
-    # email verification
+    # Email Verification
     is_verified = Column(Boolean, nullable=False, default=False)
     email_verification_code = Column(String(255), nullable=True)
-    email_verification_expires = Column(DateTime, nullable=True)
+    email_verification_expires = Column(DateTime(timezone=True), nullable=True)
     email_verification_attempts = Column(Integer, nullable=False, default=0)
-    email_verification_locked_until = Column(DateTime, nullable=True)
+    email_verification_locked_until = Column(DateTime(timezone=True), nullable=True)
 
-    # Telegram login
+    # Telegram Auth
     telegram_id = Column(Integer, nullable=True, unique=True)
     telegram_username = Column(String(255), nullable=True)
 
-    # password reset
+    # Password Reset
     password_reset_token = Column(String(255), nullable=True)
-    password_reset_expires = Column(DateTime, nullable=True)
+    password_reset_expires = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(TIMESTAMP, server_default=func.now(), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=True)
     updated_at = Column(
-        TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=True
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=True
     )
-    
-    
 
     sales = relationship("Sale", back_populates="user", cascade="all, delete-orphan")

@@ -31,3 +31,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+print("MAIL_SERVER:", settings.MAIL_SERVER)
+print("MAIL_PORT:", settings.MAIL_PORT)
+print("MAIL_USERNAME:", settings.MAIL_USERNAME)
+print("MAIL_FROM:", settings.MAIL_FROM)
+print("MAIL_PASSWORD configured:", bool(settings.MAIL_PASSWORD))

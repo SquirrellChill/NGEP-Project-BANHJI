@@ -83,3 +83,10 @@ CREATE TABLE sale_items (
     CONSTRAINT chk_sale_items_unit_price_nonneg CHECK (unit_price >= 0),
     CONSTRAINT chk_sale_items_amount_nonneg CHECK (amount >= 0)
 ) ENGINE=InnoDB;
+
+
+ALTER TABLE users
+ADD COLUMN otp_hash VARCHAR(64) NULL,
+ADD COLUMN otp_expires_at DATETIME NULL,
+ADD COLUMN otp_attempts INT DEFAULT 0,
+ADD COLUMN otp_last_sent_at DATETIME NULL;
