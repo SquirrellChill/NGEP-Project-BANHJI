@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # Used to build the password reset link sent by email
     FRONTEND_URL: str = "http://localhost:5173"
 
+    #Telegram Login Widget (leave blank to disable Telegram Login)
+    TELEGRAM_BOT_TOKEN: str=""
+    TELEGRAM_BOT_USERNAME: str=""
+
+    #SMS provider (False= print OTP codes to console instead of sending)
+    SMS_PROVIDER_ENABLED: bool= False
+
     class Config:
         env_file = ".env"
 

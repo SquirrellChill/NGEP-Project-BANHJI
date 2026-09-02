@@ -21,6 +21,10 @@ class User(Base):
     email_verification_attempts = Column(Integer, nullable=False, default=0)
     email_verification_locked_until = Column(DateTime, nullable=True)
 
+    # Telegram login
+    telegram_id = Column(Integer, nullable=True, unique=True)
+    telegram_username = Column(String(255), nullable=True)
+
     # password reset
     password_reset_token = Column(String(255), nullable=True)
     password_reset_expires = Column(DateTime, nullable=True)
@@ -29,5 +33,7 @@ class User(Base):
     updated_at = Column(
         TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=True
     )
+    
+    
 
     sales = relationship("Sale", back_populates="user", cascade="all, delete-orphan")

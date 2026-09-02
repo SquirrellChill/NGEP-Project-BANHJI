@@ -33,10 +33,10 @@ def _send_email(to_email: str, subject: str, body: str) -> None:
 
 
 def send_verification_email(to_email: str, code: str, first_name: str) -> None:
-    subject = "Verify your BANHJI account"
+    subject = "Verify your KotChomnol account"
     body = (
         f"Hi {first_name},\n\n"
-        f"Your BANHJI verification code is: {code}\n"
+        f"Your KotChomnol verification code is: {code}\n"
         f"This code expires in 15 minutes.\n\n"
         f"If you didn't request this, you can ignore this email."
     )
@@ -44,11 +44,11 @@ def send_verification_email(to_email: str, code: str, first_name: str) -> None:
 
 
 def send_password_reset_email(to_email: str, reset_token: str, first_name: str) -> None:
-    subject = "Reset your BANHJI password"
+    subject = "Reset your KotChomnol password"
     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
     body = (
         f"Hi {first_name},\n\n"
-        f"Click the link below to reset your BANHJI password:\n{reset_link}\n"
+        f"Click the link below to reset your KotChomnol password:\n{reset_link}\n"
         f"This link expires in 30 minutes.\n\n"
         f"If you didn't request this, you can ignore this email."
     )
