@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Text, DECIMAL
+from sqlalchemy import Column, Integer, ForeignKey, Text, DECIMAL, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -14,6 +14,7 @@ class SaleItem(Base):
     description = Column(Text, nullable=False)
     quantity = Column(DECIMAL(10, 2), nullable=False)
     unit_price = Column(DECIMAL(12, 2), nullable=False)
+    currency = Column(String(3), nullable=False)
     amount = Column(DECIMAL(12, 2), nullable=False)
 
     sale = relationship("Sale", back_populates="items")

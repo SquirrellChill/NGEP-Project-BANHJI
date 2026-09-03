@@ -1,9 +1,10 @@
 -- ============================================================
 -- BANHJI Database Schema
 -- MySQL 8.0+
+-- One file, no migrations needed — this is the full final structure.
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS kotchomnol;
+CREATE DATABASE IF NOT EXISTS kotchomnol
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
@@ -14,17 +15,34 @@ USE kotchomnol;
 -- ------------------------------------------------------------
 CREATE TABLE users (
     user_id         INT AUTO_INCREMENT PRIMARY KEY,
-    first_name      VARCHAR(100)    NOT NULL,
-    last_name       VARCHAR(100)    NOT NULL,
+    first_name      VARCHAR(100)    NULL,   -- unknown until profile completed (Telegram signup)
+    last_name       VARCHAR(100)    NULL,
     phone_number    VARCHAR(20)     NOT NULL,
     email           VARCHAR(255)    NULL,
-    password_hash   VARCHAR(255)    NOT NULL,
+    password_hash   VARCHAR(255)    NULL,   -- NULL for Telegram-only accounts
+
+    -- email verification
+    is_verified                     BOOLEAN         NOT NULL DEFAULT FALSE,
+    email_verification_code         VARCHAR(255)    NULL,  -- sha256 hash of the code, never store plaintext
+    email_verification_expires      DATETIME        NULL,
+    email_verification_attempts     INT             NOT NULL DEFAULT 0,
+    email_verification_locked_until DATETIME        NULL,
+
+    -- password reset
+    password_reset_token            VARCHAR(255)    NULL,  -- sha256 hash of the token
+    password_reset_expires          DATETIME        NULL,
+
+    -- Telegram login
+    telegram_id         BIGINT          NULL,
+    telegram_username   VARCHAR(255)    NULL,
+
     created_at      TIMESTAMP       NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP       NULL DEFAULT CURRENT_TIMESTAMP
                                      ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE KEY uq_users_phone_number (phone_number),
-    UNIQUE KEY uq_users_email (email)
+    UNIQUE KEY uq_users_email (email),
+    UNIQUE KEY uq_users_telegram_id (telegram_id)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -65,3 +83,10 @@ CREATE TABLE sale_items (
     CONSTRAINT chk_sale_items_unit_price_nonneg CHECK (unit_price >= 0),
     CONSTRAINT chk_sale_items_amount_nonneg CHECK (amount >= 0)
 ) ENGINE=InnoDB;
+
+
+ALTER TABLE users
+ADD COLUMN otp_hash VARCHAR(64) NULL,
+ADD COLUMN otp_expires_at DATETIME NULL,
+ADD COLUMN otp_attempts INT DEFAULT 0,
+ADD COLUMN otp_last_sent_at DATETIME NULL;
