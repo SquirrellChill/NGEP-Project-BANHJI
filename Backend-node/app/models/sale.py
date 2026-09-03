@@ -1,8 +1,12 @@
+import enum
 from sqlalchemy import Column, Integer, ForeignKey, Date, DECIMAL, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
+class EntryType(str, enum.Enum):
+    VOICE = "voice"
+    MANUAL = "manual"
 
 class Sale(Base):
     __tablename__ = "sales"

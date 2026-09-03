@@ -1,5 +1,11 @@
+import sys
+from pathlib import Path
 from datetime import date
 
+# 1. Update Python's path FIRST
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+# 2. Import app modules AFTER sys.path is updated
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.models.sale import Sale
@@ -97,7 +103,6 @@ def seed():
                 db.add(sale_item)
 
         db.commit()
-
         print("Seed data inserted successfully.")
 
     except Exception:

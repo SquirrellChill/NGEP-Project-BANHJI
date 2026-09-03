@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, auth_telegram, telegram_test_page
+from app.routers import auth, auth_telegram, telegram_test_page,dashboard,transactions
 
 app = FastAPI(title="KotChomnol API")
 
@@ -20,7 +20,13 @@ app.include_router(auth_telegram.router)
 app.include_router(telegram_test_page.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 
+app.include_router(dashboard.router)
+app.include_router(transactions.router)
+
 
 @app.get("/")
 def health_check():
     return {"status": "ok", "service": "BANHJI API"}
+
+
+#eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwiZXhwIjoxNzg4NTMzMTE4fQ.sOh0mIzOdsavdw7De19bdHGheNt2U2sWdQcjlFPhfcQ
