@@ -1,3 +1,5 @@
+
+
 # """Record -> BANHJI database payload. One job.
 
 # Separate from extractor.py on purpose: extraction answers "what did the seller
@@ -207,6 +209,9 @@
 #     """Round to the schema's scale and hand back a plain float for JSON."""
 #     return float(Decimal(value).quantize(quant, rounding=ROUND_HALF_UP))
 
+
+
+
 """Record -> BANHJI database payload. One job.
 
 Separate from extractor.py on purpose: extraction answers "what did the seller
@@ -271,9 +276,15 @@ def to_sale_payload(record: dict, today: date | None = None) -> dict:
     ready = not blockers
     sale = None
     if ready:
+        method = record.get("payment_method") or config.DEFAULT_PAYMENT_METHOD
         sale = {
             "sale_date": sale_date.isoformat(),
             "total_amount": _money(total),
+            "currency": currency,
+            "payment_method": method,
+            # False means the sale happened but the money hasn't arrived.
+            # Daily income should sum settled rows only.
+            "settled": method in config.SETTLED_PAYMENT_METHODS,
         }
 
     return {

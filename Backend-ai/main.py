@@ -1,114 +1,3 @@
-# """FastAPI surface. Called by the Node/Express backend, never by the app directly.
-
-# The Gemini SDK is synchronous. Calling it directly inside `async def` blocks the
-# event loop and serializes every concurrent request, so every call goes through
-# run_in_threadpool.
-# """
-
-# import json
-# from contextlib import asynccontextmanager
-# from typing import Optional
-
-# from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-# from fastapi.concurrency import run_in_threadpool
-# from pydantic import BaseModel
-
-# import config
-# import pipeline
-
-# @asynccontextmanager
-# async def lifespan(_: FastAPI):
-#     # Fail at boot on a bad key or bad ASR_BACKEND, not on a seller's first sale.
-#     config.validate()
-#     config.get_client()  # warm the client so the first request isn't slower
-#     yield
-
-
-# app = FastAPI(title="KOTCHOMNOL AI backend", version="1.0.0", lifespan=lifespan)
-
-
-# class FollowupRequest(BaseModel):
-#     transcript: str
-#     record: dict
-#     answer_text: str
-#     attempts: int = 0
-#     # Echo these back from the previous response so the answer lands in the
-#     # right line item. A two-product sale has more than one gap to fill.
-#     asked_index: int = 0
-#     asked_field: str = "item"
-#     asked_question: str = ""
-
-
-# @app.get("/health")
-# def health() -> dict:
-#     return {
-#         "ok": True,
-#         "asr_backend": config.ASR_BACKEND,
-#         "asr_model": (
-#             config.ASR_PROMPTED_MODEL
-#             if config.ASR_BACKEND == "prompted"
-#             else config.ASR_TRANSCRIBE_MODEL
-#         ),
-#         "extraction_model": config.EXTRACTION_MODEL,
-#     }
-
-
-# @app.post("/sale/voice")
-# async def sale_voice(
-#     audio: UploadFile = File(...),
-#     mime_type: Optional[str] = Form(None),
-#     catalog: Optional[str] = Form(None),
-# ) -> dict:
-#     """A seller has spoken a sale. Returns a record plus what to do next."""
-#     audio_bytes = await audio.read()
-#     if not audio_bytes:
-#         raise HTTPException(status_code=400, detail="Empty audio upload.")
-
-#     resolved_mime = mime_type or audio.content_type or "audio/ogg"
-
-#     # Node sends the seller's known product names as a JSON array of strings.
-#     names = []
-#     if catalog:
-#         try:
-#             parsed = json.loads(catalog)
-#             if isinstance(parsed, list):
-#                 names = [str(n) for n in parsed]
-#         except json.JSONDecodeError:
-#             # Biasing is an optimisation, never a reason to reject a sale.
-#             names = []
-
-#     try:
-#         return await run_in_threadpool(
-#             pipeline.process_audio, audio_bytes, resolved_mime, names
-#         )
-#     except ValueError as exc:
-#         raise HTTPException(status_code=400, detail=str(exc)) from exc
-#     except RuntimeError as exc:
-#         # Upstream ASR/extraction failure after retries. 502, not 500 — the
-#         # Node backend should surface manual entry rather than retry blindly.
-#         raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-
-# @app.post("/sale/followup")
-# async def sale_followup(payload: FollowupRequest) -> dict:
-#     """The seller answered the clarification question. Continue the loop."""
-#     if not payload.answer_text.strip():
-#         raise HTTPException(status_code=400, detail="Empty follow-up answer.")
-
-#     try:
-#         return await run_in_threadpool(
-#             pipeline.process_followup,
-#             payload.transcript,
-#             payload.record,
-#             payload.answer_text,
-#             payload.attempts,
-#             payload.asked_index,
-#             payload.asked_field,
-#             payload.asked_question,
-#         )
-#     except RuntimeError as exc:
-#         raise HTTPException(status_code=502, detail=str(exc)) from exc
-
 """FastAPI surface. Called by the backend, never by the app directly.
 
 The Gemini SDK is synchronous. Calling it directly inside `async def` blocks the
@@ -130,7 +19,7 @@ from pydantic import BaseModel
 
 import config
 import extractor
-import pipeline
+import graph as pipeline
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -299,7 +188,7 @@ async def test_text(payload: TextRequest) -> dict:
 
     def run():
         record = extractor.extract(transcript)
-        return pipeline._resolve(transcript, record, attempts=0)
+        return pipeline.resolve(transcript, record, attempts=0)
 
     try:
         return await run_in_threadpool(run)
@@ -344,6 +233,6 @@ async def test_record(payload: RecordRequest) -> dict:
     record = extractor.normalize(payload.record or {})
 
     def run():
-        return pipeline._resolve(payload.transcript, record, payload.attempts)
+        return pipeline.resolve(payload.transcript, record, payload.attempts)
 
     return await run_in_threadpool(run)
