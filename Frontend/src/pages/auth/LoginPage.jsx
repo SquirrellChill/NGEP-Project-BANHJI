@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Zap } from 'lucide-react';
-import { login, getErrorMessage } from '../../services/authService';
+import { getErrorMessage } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
