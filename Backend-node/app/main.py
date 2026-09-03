@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, auth_telegram, telegram_test_page,dashboard,transactions
+from app.routers import auth, auth_telegram,dashboard, telegram_test_page, transactions, voice
 
 app = FastAPI(title="KotChomnol API")
 
@@ -22,6 +22,7 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 
 app.include_router(dashboard.router)
 app.include_router(transactions.router)
+app.include_router(voice.router)
 
 
 @app.get("/")
