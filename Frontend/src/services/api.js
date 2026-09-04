@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-// Backend-node — the FastAPI service handling auth + transactions
+// Backend — the FastAPI service handling auth, transactions, and voice
 export const nodeApi = axios.create({
   baseURL: import.meta.env.VITE_NODE_API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Backend-ai — the FastAPI service handling speech-to-text / extraction
+// Kept as a separate client shape for compatibility with existing callers.
 export const aiApi = axios.create({
   baseURL: import.meta.env.VITE_AI_API_URL,
 });

@@ -51,14 +51,14 @@ export default function LandingPage() {
     return () => observer.disconnect();
   }, []);
 
-  const handleLogout = () => {
-    if (logout) {
-      logout();
-    }
-    localStorage.removeItem('kc_token');
-    localStorage.removeItem('kc_user');
-    navigate('/');
-  };
+  // const handleLogout = () => {
+  //   if (logout) {
+  //     logout();
+  //   }
+  //   localStorage.removeItem('kc_token');
+  //   localStorage.removeItem('kc_user');
+  //   navigate('/');
+  // };
 
   return (
     <div className="landing-wrapper">
@@ -86,10 +86,10 @@ export default function LandingPage() {
             {isLoggedIn ? (
               /* LANDING 2: Logged In -> Dashboard & Logout */
               <>
-                <button className="btn-secondary-sm" onClick={handleLogout}>
+                {/* <button className="btn-secondary-sm" onClick={handleLogout}>
                   <LogOut size={14} style={{ marginRight: '6px' }} />
                   Log Out
-                </button>
+                </button> */}
                 <button className="btn-violet-sm" onClick={() => navigate('/dashboard')}>
                   <LayoutDashboard size={16} style={{ marginRight: '6px' }} />
                   Dashboard
