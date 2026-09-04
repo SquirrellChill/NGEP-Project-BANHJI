@@ -28,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await login(formData);
-      navigate('/'); // CHANGED: Now redirects to landing page instead of /dashboard
+      navigate('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
