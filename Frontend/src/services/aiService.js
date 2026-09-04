@@ -1,8 +1,7 @@
-// Backend-ai/app/routers/extract.py is currently an empty file —
-// no endpoint exists yet. Placeholder shape only.
+// Voice extraction is now served by Backend's /voice routes.
 
 import { aiApi } from './api';
 
 export const extractFromSpeech = () => {
-  throw new Error('Not implemented — extract.py has no routes yet.');
+  throw new Error('Not implemented — use the Backend /voice/sale endpoint.');
 };
