@@ -1,6 +1,6 @@
 """
 
-Run from inside Backend-node/:
+Run from inside Backend/:
     python test_connection.py
 """
 
