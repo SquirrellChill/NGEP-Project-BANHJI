@@ -3,7 +3,7 @@ Simulates a Telegram Login Widget request, using your real bot token to sign
 the payload exactly the way Telegram would. Lets you test /auth/telegram/login
 without needing a live domain for the actual widget yet.
 
-Run from inside Backend-node/, with your server already running in another
+Run from inside Backend/, with your server already running in another
 terminal (uvicorn app.main:app --reload):
 
     python test_telegram_login.py
@@ -51,7 +51,7 @@ def post_json(url: str, payload: dict):
 def main():
     if not BOT_TOKEN:
         print("ERROR: TELEGRAM_BOT_TOKEN not found in .env")
-        print("Add this line to Backend-node/.env and try again:")
+        print("Add this line to Backend/.env and try again:")
         print("  TELEGRAM_BOT_TOKEN=your_real_token_here")
         return
 
