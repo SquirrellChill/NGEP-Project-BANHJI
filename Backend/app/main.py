@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from Backend.tests import telegram_test_page
 from app.core.config import settings
-from app.routers import auth, auth_telegram,dashboard, transactions, voice
+from app.routers import auth, auth_telegram,dashboard, transactions, voice, telegram_test_page
 
 app = FastAPI(title="KotChomnol API")
 
