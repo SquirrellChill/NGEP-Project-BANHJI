@@ -1,11 +1,15 @@
+// C:\Users\U-ser\OneDrive\Desktop\CADT\NextGen_Project\NGEP-Project-BANHJI\Frontend\src\pages\auth\LoginPage.jsx
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Zap } from 'lucide-react';
-import { login, getErrorMessage } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import { getErrorMessage } from '../../services/authService';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await login(formData);
-      navigate('/dashboard');
+      navigate('/'); // CHANGED: Now redirects to landing page instead of /dashboard
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

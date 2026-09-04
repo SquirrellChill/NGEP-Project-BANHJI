@@ -1,10 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Zap, Mic, BarChart3, Cloud, ArrowDown, Lock, Plus, Minus } from 'lucide-react';
+import { Sparkles, Zap, Mic, BarChart3, Cloud, ArrowDown, Lock, Plus, Minus, LayoutDashboard, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import './LandingPage.css';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  
+  // STRICT USER CHECK: Validates if the user object/token actually exists and contains real data
+  const checkIsLoggedIn = () => {
+    // 1. Check AuthContext user object properties
+    if (user && typeof user === 'object' && Object.keys(user).length > 0) {
+      if (user.token || user.email || user.id || user._id) return true;
+    }
+    if (typeof user === 'string' && user !== 'null' && user !== 'undefined' && user.trim() !== '') {
+      return true;
+    }
+
+    // 2. Check localStorage key values safely
+    const token = localStorage.getItem('kc_token');
+    const storedUser = localStorage.getItem('kc_user');
+
+    const isValidValue = (val) => val && val !== 'null' && val !== 'undefined' && val !== '{}' && val !== '""';
+
+    return isValidValue(token) || isValidValue(storedUser);
+  };
+
+  const isLoggedIn = checkIsLoggedIn();
+
   const [activeTab, setActiveTab] = useState('voice');
   const [openFaq, setOpenFaq] = useState(null);
 
@@ -18,7 +42,7 @@ export default function LandingPage() {
           }
         });
       },
-      { threshold: 0.15 } // Triggers when 15% of the element is visible
+      { threshold: 0.15 }
     );
 
     const revealElements = document.querySelectorAll('.reveal');
@@ -26,6 +50,15 @@ export default function LandingPage() {
 
     return () => observer.disconnect();
   }, []);
+
+  const handleLogout = () => {
+    if (logout) {
+      logout();
+    }
+    localStorage.removeItem('kc_token');
+    localStorage.removeItem('kc_user');
+    navigate('/');
+  };
 
   return (
     <div className="landing-wrapper">
@@ -48,13 +81,31 @@ export default function LandingPage() {
             <a href="#faq">FAQ</a>
           </div>
 
+          {/* DYNAMIC HEADER BUTTONS */}
           <div className="nav-actions">
-            <button className="btn-secondary-sm" onClick={() => navigate('/login')}>
-              Log In
-            </button>
-            <button className="btn-violet-sm" onClick={() => navigate('/register')}>
-              Get Started
-            </button>
+            {isLoggedIn ? (
+              /* LANDING 2: Logged In -> Dashboard & Logout */
+              <>
+                <button className="btn-secondary-sm" onClick={handleLogout}>
+                  <LogOut size={14} style={{ marginRight: '6px' }} />
+                  Log Out
+                </button>
+                <button className="btn-violet-sm" onClick={() => navigate('/dashboard')}>
+                  <LayoutDashboard size={16} style={{ marginRight: '6px' }} />
+                  Dashboard
+                </button>
+              </>
+            ) : (
+              /* LANDING 1: Logged Out -> Log In & Get Started */
+              <>
+                <button className="btn-secondary-sm" onClick={() => navigate('/login')}>
+                  Log In
+                </button>
+                <button className="btn-violet-sm" onClick={() => navigate('/register')}>
+                  Get Started
+                </button>
+              </>
+            )}
           </div>
         </nav>
       </header>
@@ -74,10 +125,19 @@ export default function LandingPage() {
           KotChomnol turns spoken shop orders into structured financial statements instantly. Eliminate manual record-keeping with real-time Khmer & English voice recognition.
         </p>
 
+        {/* DYNAMIC HERO CTA BUTTON */}
         <div className="hero-cta-group reveal reveal-up delay-3">
-          <button className="btn-violet-lg" onClick={() => navigate('/register')}>
-            Start Free 14-Day Trial →
-          </button>
+          {isLoggedIn ? (
+            /* LANDING 2 HERO BUTTON */
+            <button className="btn-violet-lg" onClick={() => navigate('/dashboard')}>
+              Go to Dashboard →
+            </button>
+          ) : (
+            /* LANDING 1 HERO BUTTON */
+            <button className="btn-violet-lg" onClick={() => navigate('/register')}>
+              Start Free 14-Day Trial →
+            </button>
+          )}
         </div>
 
         <p className="hero-micro-copy reveal reveal-up delay-4">
@@ -91,7 +151,7 @@ export default function LandingPage() {
               <div className="dot red"></div>
               <div className="dot yellow"></div>
               <div className="dot green"></div>
-              <span className="mockup-title">kotchomol.ai/live-dashboard</span>
+              <span className="mockup-title">kotchomnol.ai/live-dashboard</span>
             </div>
 
             <div className="mockup-body">
@@ -252,10 +312,19 @@ export default function LandingPage() {
         <div className="footer-cta-content reveal reveal-up">
           <h2 className="text-violet-glow">Transform Your Business Bookkeeping Today</h2>
           <p>Join store owners saving hours on manual record keeping using KotChomnol.</p>
-          <button className="btn-violet-lg" onClick={() => navigate('/register')}>
-            Get Started For Free →
-          </button>
+          
+          {/* DYNAMIC FOOTER BUTTON */}
+          {isLoggedIn ? (
+            <button className="btn-violet-lg" onClick={() => navigate('/dashboard')}>
+              Go to Dashboard →
+            </button>
+          ) : (
+            <button className="btn-violet-lg" onClick={() => navigate('/register')}>
+              Get Started For Free →
+            </button>
+          )}
         </div>
+
         <div className="footer-bottom">
           <p>© 2026 KotChomnol AI. All rights reserved.</p>
         </div>

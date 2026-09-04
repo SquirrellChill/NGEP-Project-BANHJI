@@ -20,12 +20,6 @@ class Settings(BaseSettings):
     MAIL_PASSWORD: str = ""
     MAIL_FROM: str = "no-reply@kotchomnol.app"
 
-    MAIL_USERNAME: str
-    MAIL_PASSWORD: str
-    MAIL_FROM: str
-    MAIL_SERVER: str = "smtp.gmail.com"
-    MAIL_PORT: int = 587
-
     # Used to build the password reset link sent by email
     FRONTEND_URL: str = "http://localhost:5173"
 
