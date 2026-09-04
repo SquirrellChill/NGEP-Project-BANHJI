@@ -1,61 +1,3 @@
-# """Text -> structured sales record (item, quantity, price, date)."""
-
-# import json
-# import google.generativeai as genai
-# from config import GEMINI_API_KEY, EXTRACT_MODEL
-# from prompts import EXTRACT_PROMPT
-
-# genai.configure(api_key=GEMINI_API_KEY)
-
-
-# def _clean_json_text(text: str) -> str:
-#     """Strips markdown code fences if the model wraps its JSON output."""
-#     text = text.strip()
-#     if text.startswith("```"):
-#         text = text.split("```")[1]
-#         if text.startswith("json"):
-#             text = text[len("json"):]
-#         text = text.strip()
-#     return text
-
-
-# # def extract_fields(transcript: str) -> dict:
-# #     """Takes a transcript string, returns a dict with item/quantity/price/date."""
-# #     model = genai.GenerativeModel(EXTRACT_MODEL)
-# #     prompt = EXTRACT_PROMPT.format(transcript=transcript)
-# #     response = model.generate_content(prompt)
-
-# #     text = _clean_json_text(response.text)
-
-# #     try:
-# #         return json.loads(text)
-# #     except json.JSONDecodeError:
-# #         # Model didn't return valid JSON — surface this clearly rather than
-# #         # crashing downstream with a confusing error.
-# #         raise ValueError(f"Model did not return valid JSON. Raw output: {text}")
-# def extract_fields(transcript: str) -> dict:
-#     """Takes a transcript string, returns a dict with item/quantity/price/date."""
-#     model = genai.GenerativeModel(EXTRACT_MODEL)
-#     prompt = EXTRACT_PROMPT.format(transcript=transcript)
-#     response = model.generate_content(prompt)
-
-#     text = _clean_json_text(response.text)
-
-#     try:
-#         parsed = json.loads(text)
-#     except json.JSONDecodeError:
-#         raise ValueError(f"Model did not return valid JSON. Raw output: {text}")
-
-#     # Gemini sometimes wraps a single record in a list — unwrap it.
-#     if isinstance(parsed, list):
-#         if len(parsed) == 0:
-#             raise ValueError(f"Model returned an empty list. Raw output: {text}")
-#         parsed = parsed[0]
-
-#     if not isinstance(parsed, dict):
-#         raise ValueError(f"Expected a JSON object, got {type(parsed).__name__}. Raw output: {text}")
-
-#     return parsed
 
 # """Text -> structured record. One job.
 
@@ -153,7 +95,7 @@
 
 
 # def empty_record() -> dict:
-#     return {"items": [empty_line()], "date": None}
+#     return {"items": [empty_line()], "date": None, "payment_method": None}
 
 
 # def parse_json(raw: str) -> dict:
@@ -197,7 +139,13 @@
 #     if not items:
 #         items = [empty_line()]
 
-#     return {"items": items, "date": _clean_text(parsed.get("date"))}
+#     return {
+#         "items": items,
+#         "date": _clean_text(parsed.get("date")),
+#         "payment_method": _to_enum(
+#             parsed.get("payment_method"), config.VALID_PAYMENT_METHODS
+#         ),
+#     }
 
 
 # def _clean_text(value):
@@ -255,6 +203,87 @@
 #     return None
 
 
+# def infer_currency(record: dict, default_method: str | None = None):
+#     """Fill in currencies the seller didn't say out loud.
+
+#     Two rules, in order. Neither overwrites a stated currency.
+
+#     1. If exactly one currency was stated anywhere in the sale, apply it to
+#        the lines that have none. A seller quoting one product in riel is
+#        almost never quoting the next in dollars without saying so.
+#     2. Otherwise infer from magnitude, but only outside the ambiguous middle.
+#        500 could plausibly be 500 riel, so that still gets asked about.
+
+#     Returns (record, notes). Every inference is reported so the confirmation
+#     screen can show it rather than the number changing meaning silently.
+#     """
+#     items = [dict(line) for line in record.get("items") or []]
+#     notes = []
+#     method = record.get("payment_method")
+
+#     if method is None:
+#         method = default_method or config.DEFAULT_PAYMENT_METHOD
+#         source = "this seller's usual method" if default_method else "the default"
+#         notes.append({
+#             "index": None, "basis": "default", "currency": None,
+#             "note": f"payment method not spoken, assumed {method} ({source}). "
+#                     "Confirm before saving.",
+#         })
+#     elif method == "credit":
+#         notes.append({
+#             "index": None, "basis": "credit", "currency": None,
+#             "note": "recorded as credit — the money has not been received, so "
+#                     "it should not count toward cash or bank income yet.",
+#         })
+
+#     def out(lines):
+#         return {"items": lines, "date": record.get("date"),
+#                 "payment_method": method}
+
+#     if not config.CURRENCY_INFER:
+#         return out(items), notes
+
+#     stated = {line.get("currency") for line in items if line.get("currency")}
+#     sale_currency = stated.pop() if len(stated) == 1 else None
+
+#     for index, line in enumerate(items):
+#         if line.get("currency") is not None:
+#             continue
+#         price = line.get("price")
+#         if price is None:
+#             continue
+
+#         if sale_currency:
+#             items[index]["currency"] = sale_currency
+#             notes.append({
+#                 "index": index, "currency": sale_currency, "basis": "sale",
+#                 "note": f"item {index + 1}: currency not spoken, matched the "
+#                         f"rest of this sale ({sale_currency}).",
+#             })
+#             continue
+
+#         inferred = _currency_from_magnitude(price)
+#         if inferred is None:
+#             continue  # ambiguous — leave it for the follow-up to ask
+#         items[index]["currency"] = inferred
+#         notes.append({
+#             "index": index, "currency": inferred, "basis": "magnitude",
+#             "note": f"item {index + 1}: currency not spoken, read {price:g} as "
+#                     f"{inferred} from the amount. Confirm before saving.",
+#         })
+
+#     return out(items), notes
+
+
+# def _currency_from_magnitude(price):
+#     if price >= config.KHR_MIN_PRICE:
+#         return "KHR"
+#     if price <= config.USD_MAX_PRICE:
+#         return "USD"
+
+#     return None
+
+
 
 
 """Text -> structured record. One job.
@@ -272,8 +301,16 @@ clarification loop always has a slot to ask about.
 import json
 import re
 
-import config
-import prompts
+from app.core.config import (
+    settings,
+    LINE_FIELDS,
+    VALID_PAYMENT_METHODS,
+    VALID_PRICE_BASIS,
+    call_with_retry,
+    generation_config,
+    get_client,
+)
+from app.services import prompts
 
 _FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 _NUMBER = re.compile(r"-?\d+(?:[.,]\d+)?")
@@ -291,17 +328,17 @@ def extract(transcript: str) -> dict:
     if not transcript or not transcript.strip():
         return empty_record()
 
-    client = config.get_client()
+    client = get_client()
     prompt = prompts.EXTRACTION_PROMPT.format(transcript=transcript.strip())
 
     def call():
         return client.models.generate_content(
-            model=config.EXTRACTION_MODEL,
+            model=settings.EXTRACTION_MODEL,
             contents=prompt,
-            config=config.generation_config(),
+            config=generation_config(),
         )
 
-    response = config.call_with_retry(call, what="Extraction")
+    response = call_with_retry(call, what="Extraction")
     return normalize(parse_json(getattr(response, "text", "") or ""))
 
 
@@ -324,19 +361,19 @@ def extract_field_answer(field: str, question: str, answer: str):
         if direct is not None:
             return direct
 
-    client = config.get_client()
+    client = get_client()
     prompt = prompts.FIELD_ANSWER_PROMPT.format(
         question=question, answer=answer, field=field
     )
 
     def call():
         return client.models.generate_content(
-            model=config.EXTRACTION_MODEL,
+            model=settings.EXTRACTION_MODEL,
             contents=prompt,
-            config=config.generation_config(),
+            config=generation_config(),
         )
 
-    response = config.call_with_retry(call, what="Follow-up parsing")
+    response = call_with_retry(call, what="Follow-up parsing")
     value = parse_json(getattr(response, "text", "") or "").get("value")
 
     if field == "quantity":
@@ -349,11 +386,11 @@ def extract_field_answer(field: str, question: str, answer: str):
 
 
 def empty_line() -> dict:
-    return {field: None for field in config.LINE_FIELDS}
+    return {field: None for field in LINE_FIELDS}
 
 
 def empty_record() -> dict:
-    return {"items": [empty_line()], "date": None}
+    return {"items": [empty_line()], "date": None, "payment_method": None}
 
 
 def parse_json(raw: str) -> dict:
@@ -380,7 +417,7 @@ def normalize(parsed: dict) -> dict:
         raw_items = []
 
     items = []
-    for entry in raw_items[: config.MAX_ITEMS]:
+    for entry in raw_items[: settings.MAX_ITEMS]:
         if not isinstance(entry, dict):
             continue
         line = {
@@ -389,7 +426,7 @@ def normalize(parsed: dict) -> dict:
             "unit": _clean_text(entry.get("unit")),
             "price": _to_number(entry.get("price"), as_int=False),
             "currency": _to_currency(entry.get("currency")),
-            "price_basis": _to_enum(entry.get("price_basis"), config.VALID_PRICE_BASIS),
+            "price_basis": _to_enum(entry.get("price_basis"), VALID_PRICE_BASIS),
         }
         if any(v is not None for v in line.values()):
             items.append(line)
@@ -397,7 +434,13 @@ def normalize(parsed: dict) -> dict:
     if not items:
         items = [empty_line()]
 
-    return {"items": items, "date": _clean_text(parsed.get("date"))}
+    return {
+        "items": items,
+        "date": _clean_text(parsed.get("date")),
+        "payment_method": _to_enum(
+            parsed.get("payment_method"), VALID_PAYMENT_METHODS
+        ),
+    }
 
 
 def _clean_text(value):
@@ -455,7 +498,7 @@ def _to_number(value, *, as_int: bool):
     return None
 
 
-def infer_currency(record: dict):
+def infer_currency(record: dict, default_method: str | None = None):
     """Fill in currencies the seller didn't say out loud.
 
     Two rules, in order. Neither overwrites a stated currency.
@@ -471,9 +514,29 @@ def infer_currency(record: dict):
     """
     items = [dict(line) for line in record.get("items") or []]
     notes = []
+    method = record.get("payment_method")
 
-    if not config.CURRENCY_INFER:
-        return {"items": items, "date": record.get("date")}, notes
+    if method is None:
+        method = default_method or settings.DEFAULT_PAYMENT_METHOD
+        source = "this seller's usual method" if default_method else "the default"
+        notes.append({
+            "index": None, "basis": "default", "currency": None,
+            "note": f"payment method not spoken, assumed {method} ({source}). "
+                    "Confirm before saving.",
+        })
+    elif method == "credit":
+        notes.append({
+            "index": None, "basis": "credit", "currency": None,
+            "note": "recorded as credit — the money has not been received, so "
+                    "it should not count toward cash or bank income yet.",
+        })
+
+    def out(lines):
+        return {"items": lines, "date": record.get("date"),
+                "payment_method": method}
+
+    if not settings.CURRENCY_INFER:
+        return out(items), notes
 
     stated = {line.get("currency") for line in items if line.get("currency")}
     sale_currency = stated.pop() if len(stated) == 1 else None
@@ -504,12 +567,12 @@ def infer_currency(record: dict):
                     f"{inferred} from the amount. Confirm before saving.",
         })
 
-    return {"items": items, "date": record.get("date")}, notes
+    return out(items), notes
 
 
 def _currency_from_magnitude(price):
-    if price >= config.KHR_MIN_PRICE:
+    if price >= settings.KHR_MIN_PRICE:
         return "KHR"
-    if price <= config.USD_MAX_PRICE:
+    if price <= settings.USD_MAX_PRICE:
         return "USD"
     return None
