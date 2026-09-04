@@ -1,4 +1,28 @@
+// C:\Users\U-ser\OneDrive\Desktop\CADT\NextGen_Project\NGEP-Project-BANHJI\Frontend\src\pages\Dashboard.jsx
+
 import React, { useState } from 'react';
+import { 
+  Sparkles, 
+  Bell, 
+  TrendingUp, 
+  Calendar, 
+  Mic, 
+  ArrowUpRight, 
+  ChevronRight, 
+  ChevronDown, 
+  Check, 
+  Edit, 
+  Edit3, 
+  Home, 
+  History, 
+  ClipboardList, 
+  User, 
+  X, 
+  Tag, 
+  Minus, 
+  Plus, 
+  Trash2 
+} from 'lucide-react';
 import './DashboardPage.css';
 
 export default function Dashboard() {
@@ -21,7 +45,9 @@ export default function Dashboard() {
       {/* Top Web Navigation Header */}
       <header className="app-header">
         <div className="header-brand">
-          <div className="brand-logo">✦</div>
+          <div className="brand-logo">
+            <Sparkles size={18} />
+          </div>
           <span className="brand-title">KotChomnol</span>
         </div>
         
@@ -33,7 +59,9 @@ export default function Dashboard() {
             <span className="user-name">Sok Bora</span>
             <span className="shop-name">Boran Coffee shop</span>
           </div>
-          <button className="notification-btn">🔔</button>
+          <button className="notification-btn" aria-label="Notifications">
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
@@ -44,8 +72,14 @@ export default function Dashboard() {
             {/* Revenue Summary Banner */}
             <div className="revenue-card-blue">
               <div className="card-top-row">
-                <span className="card-subtitle">📈 TODAY'S REVENUE</span>
-                <span className="date-badge">📅 15-Mar-2026</span>
+                <span className="card-subtitle">
+                  <TrendingUp size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                  TODAY'S REVENUE
+                </span>
+                <span className="date-badge">
+                  <Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                  15-Mar-2026
+                </span>
               </div>
               <div className="primary-revenue">42,000 KHR</div>
               <div className="secondary-revenue">Equivalent: $10.25 <small>(1$ = 4,100៛)</small></div>
@@ -58,12 +92,16 @@ export default function Dashboard() {
 
             {/* Quick Action Banner */}
             <div className="quick-action-card">
-              <div className="mic-icon-blue">🎙️</div>
+              <div className="mic-icon-blue">
+                <Mic size={22} />
+              </div>
               <div className="action-info">
                 <h3>Voice-to-sales</h3>
                 <p>Speak transaction, AI does the match</p>
               </div>
-              <span className="arrow-launch">↗</span>
+              <span className="arrow-launch">
+                <ArrowUpRight size={20} />
+              </span>
             </div>
 
             {/* Recent Transactions List */}
@@ -78,21 +116,27 @@ export default function Dashboard() {
                     <div className="item-title">Iced coffee x2</div>
                     <div className="item-meta">10:42 am • voice</div>
                   </div>
-                  <div className="item-price">4,000 KHR ›</div>
+                  <div className="item-price">
+                    4,000 KHR <ChevronRight size={16} style={{ verticalAlign: 'middle' }} />
+                  </div>
                 </div>
                 <div className="transaction-row">
                   <div>
                     <div className="item-title">Croissant x1</div>
                     <div className="item-meta">10:15 am • manual</div>
                   </div>
-                  <div className="item-price">6,000 KHR ›</div>
+                  <div className="item-price">
+                    6,000 KHR <ChevronRight size={16} style={{ verticalAlign: 'middle' }} />
+                  </div>
                 </div>
                 <div className="transaction-row">
                   <div>
                     <div className="item-title">Iced tea x3</div>
                     <div className="item-meta">9:50 am • voice</div>
                   </div>
-                  <div className="item-price">12,000 KHR ›</div>
+                  <div className="item-price">
+                    12,000 KHR <ChevronRight size={16} style={{ verticalAlign: 'middle' }} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -112,7 +156,10 @@ export default function Dashboard() {
               <button className={historyFilter === 'today' ? 'active' : ''} onClick={() => setHistoryFilter('today')}>Today</button>
               <button className={historyFilter === 'week' ? 'active' : ''} onClick={() => setHistoryFilter('week')}>This Week</button>
               <button className={historyFilter === 'month' ? 'active' : ''} onClick={() => setHistoryFilter('month')}>This Month</button>
-              <button className="calendar-filter-btn">📅 ▾</button>
+              <button className="calendar-filter-btn">
+                <Calendar size={14} style={{ marginRight: '4px' }} />
+                <ChevronDown size={14} />
+              </button>
             </div>
 
             {/* Product Summary Grid */}
@@ -167,7 +214,9 @@ export default function Dashboard() {
         {activeTab === 'review' && (
           <div className="review-view-container">
             <div className="alert-banner-success">
-              <span className="check-icon">✓</span>
+              <span className="check-icon">
+                <Check size={18} />
+              </span>
               <div>
                 <strong>AI Extraction Complete!</strong>
                 <p>We've captured the details. Please review quantities & prices below.</p>
@@ -209,7 +258,10 @@ export default function Dashboard() {
                 <div>Total amount: <strong className="highlight-price">$10.00</strong></div>
               </div>
               <div className="action-buttons-group">
-                <button className="btn-outline" onClick={() => setShowEditModal(true)}>✏ Edit Items</button>
+                <button className="btn-outline" onClick={() => setShowEditModal(true)}>
+                  <Edit3 size={15} style={{ marginRight: '6px' }} />
+                  Edit Items
+                </button>
                 <button className="btn-primary-blue">Confirm & Save Sale</button>
               </div>
             </div>
@@ -218,23 +270,23 @@ export default function Dashboard() {
       </main>
 
       {/* Floating Voice Input FAB */}
-      <button className="floating-mic-fab" onClick={() => setActiveTab('review')}>
-        🎙️
+      <button className="floating-mic-fab" onClick={() => setActiveTab('review')} aria-label="Voice Input">
+        <Mic size={22} />
       </button>
 
       {/* Bottom Web Dashboard Navigation Bar */}
       <nav className="bottom-app-nav">
         <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
-          🏠 <span>Home</span>
+          <Home size={18} /> <span>Home</span>
         </button>
         <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-          🕒 <span>History</span>
+          <History size={18} /> <span>History</span>
         </button>
         <button className={`nav-item ${activeTab === 'review' ? 'active' : ''}`} onClick={() => setActiveTab('review')}>
-          📋 <span>Transactions</span>
+          <ClipboardList size={18} /> <span>Transactions</span>
         </button>
         <button className="nav-item">
-          👤 <span>Profile</span>
+          <User size={18} /> <span>Profile</span>
         </button>
       </nav>
 
@@ -244,14 +296,21 @@ export default function Dashboard() {
           <div className="modal-content-card">
             <div className="modal-header">
               <h3>Edit Items</h3>
-              <button className="close-btn" onClick={() => setShowEditModal(false)}>✕</button>
+              <button className="close-btn" onClick={() => setShowEditModal(false)} aria-label="Close">
+                <X size={18} />
+              </button>
             </div>
 
             <div className="form-group">
-              <label>🏷 Product Name</label>
+              <label>
+                <Tag size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                Product Name
+              </label>
               <div className="input-with-action">
                 <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} />
-                <button className="badge-edit-btn">✏ Edit</button>
+                <button className="badge-edit-btn">
+                  <Edit size={14} style={{ marginRight: '4px' }} /> Edit
+                </button>
               </div>
             </div>
 
@@ -259,9 +318,13 @@ export default function Dashboard() {
               <div className="form-group">
                 <label>Quantity</label>
                 <div className="quantity-stepper">
-                  <button onClick={() => setQuantity(Math.max(0, quantity - 1))}>−</button>
+                  <button onClick={() => setQuantity(Math.max(0, quantity - 1))}>
+                    <Minus size={14} />
+                  </button>
                   <span>{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)}>+</button>
+                  <button onClick={() => setQuantity(quantity + 1)}>
+                    <Plus size={14} />
+                  </button>
                 </div>
               </div>
 
@@ -294,7 +357,10 @@ export default function Dashboard() {
             </div>
 
             <div className="modal-actions-row">
-              <button className="btn-danger" onClick={() => setShowEditModal(false)}>Delete</button>
+              <button className="btn-danger" onClick={() => setShowEditModal(false)}>
+                <Trash2 size={16} style={{ marginRight: '6px' }} />
+                Delete
+              </button>
               <button className="btn-primary-blue" onClick={() => setShowEditModal(false)}>Confirm & Save Sale</button>
             </div>
           </div>

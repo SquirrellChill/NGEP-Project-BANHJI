@@ -6,6 +6,8 @@ import ProtectedRoute from './ProtectedRoute';
 // Pages directly under src/pages/
 import LandingPage from '../pages/LandingPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
+import TermsPage from '../pages/TermsPage.jsx';
+import PrivacyPage from '../pages/PrivacyPage.jsx';
 
 // Pages inside src/pages/auth/
 import LoginPage from '../pages/auth/LoginPage.jsx';
@@ -19,13 +21,17 @@ export default function AppRoutes() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
+          {/* Protected Routes */}
           <Route
             path="/dashboard"
             element={
@@ -35,6 +41,7 @@ export default function AppRoutes() {
             }
           />
 
+          {/* Catch-all Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
