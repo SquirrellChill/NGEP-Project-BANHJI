@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
-    # SMTP (leave SMTP_HOST blank to print emails to console instead of sending)
-    MAIL_SERVER: str = ""
+    # SMTP Settings
+    MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_PORT: int = 587
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""
@@ -23,12 +23,12 @@ class Settings(BaseSettings):
     # Used to build the password reset link sent by email
     FRONTEND_URL: str = "http://localhost:5173"
 
-    #Telegram Login Widget (leave blank to disable Telegram Login)
-    TELEGRAM_BOT_TOKEN: str=""
-    TELEGRAM_BOT_USERNAME: str=""
+    # Telegram Login Widget (leave blank to disable Telegram Login)
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_USERNAME: str = ""
 
-    #SMS provider (False= print OTP codes to console instead of sending)
-    SMS_PROVIDER_ENABLED: bool= False
+    # SMS provider (False = print OTP codes to console instead of sending)
+    SMS_PROVIDER_ENABLED: bool = False
 
     class Config:
         env_file = ".env"
