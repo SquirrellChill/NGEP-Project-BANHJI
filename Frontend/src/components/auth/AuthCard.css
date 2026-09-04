@@ -3,24 +3,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f4f5f7;
+  background-color: #eef2f7;
   padding: 20px;
 }
 
 .auth-card {
   display: flex;
   width: 100%;
-  max-width: 960px;
+  max-width: 840px;
   min-height: 540px;
   background: #ffffff;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
 }
 
 .auth-banner {
   flex: 1;
-  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+  background: #0504b5;
   color: #ffffff;
   padding: 48px;
   display: flex;
@@ -35,6 +35,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: #ffffff;
 }
 
 /* Responsive collapse for mobile views */

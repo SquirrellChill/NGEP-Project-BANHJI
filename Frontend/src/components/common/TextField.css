@@ -5,26 +5,28 @@
 
 .text-field-label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 8px;
 }
 
 .text-field-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  padding: 13px 14px;
+  border: 1px solid #d8dde6;
+  border-radius: 14px;
   font-size: 15px;
   font-family: inherit;
+  background: #f8fafc;
+  color: #111827;
 }
 
 .text-field-input:focus {
   outline: none;
   border-color: var(--color-brand-500);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+  background: #ffffff;
 }
 
 .text-field-input.has-error {

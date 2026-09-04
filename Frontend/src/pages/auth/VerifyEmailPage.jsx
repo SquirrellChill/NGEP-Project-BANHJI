@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { AuthCard } from '../../components/auth/AuthCard';
-import TextField from '../../components/common/TextField';
-import Button from '../../components/common/Button';
-import { verifyEmail, getErrorMessage } from '../../services/authService';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
+import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import { getErrorMessage, verifyEmail } from '../../services/authService';
+import './LoginPage.css';
 
 export default function VerifyEmailPage() {
   const location = useLocation();
@@ -29,28 +29,29 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <AuthCard title="Verify Email" subtitle="Enter the code sent to your inbox">
-      <form onSubmit={handleSubmit}>
-        {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <TextField
-          label="Verification Code"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          required
-        />
-
-        <Button type="submit" disabled={loading}>
+    <StitchAuthLayout
+      title="Verify Email"
+      subtitle="Enter the code sent to your inbox."
+      footer={<>Already verified? <Link to="/login">Sign in</Link></>}
+    >
+      <div className="stitch-form-header">
+        <h2>Verify Email</h2>
+        <p>Confirm your email address to activate your workspace.</p>
+      </div>
+      <StitchStatusMessage type="error">{error}</StitchStatusMessage>
+      <form onSubmit={handleSubmit} className="stitch-auth-form">
+        <label className="stitch-field">
+          <span>Email</span>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+        <label className="stitch-field">
+          <span>Verification Code</span>
+          <input value={code} onChange={(e) => setCode(e.target.value)} required />
+        </label>
+        <button type="submit" className="stitch-submit-button" disabled={loading}>
           {loading ? 'Verifying...' : 'Verify Email'}
-        </Button>
+        </button>
       </form>
-    </AuthCard>
+    </StitchAuthLayout>
   );
 }

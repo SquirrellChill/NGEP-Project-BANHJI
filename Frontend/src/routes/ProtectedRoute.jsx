@@ -8,7 +8,7 @@ export default function ProtectedRoute({ children }) {
   // Render a visual fallback instead of returning null while checking session state
   if (loading) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', height: '100vh', fontFamily: 'sans-serif', color: '#6366f1' }}>
+      <div className="protected-loading-screen">
         <p>Loading application...</p>
       </div>
     );

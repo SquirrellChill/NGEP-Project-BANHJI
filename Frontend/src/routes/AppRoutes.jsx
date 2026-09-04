@@ -8,6 +8,12 @@ import LandingPage from '../pages/LandingPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import TermsPage from '../pages/TermsPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
+import HistoryScreen from '../pages/dashboard/HistoryScreen.jsx';
+import TransactionsScreen from '../pages/dashboard/TransactionsScreen.jsx';
+import VoiceScreen from '../pages/dashboard/VoiceScreen.jsx';
+import ProfileScreen from '../pages/dashboard/ProfileScreen.jsx';
+import EditProfileScreen from '../pages/dashboard/EditProfileScreen.jsx';
+import ChangePasswordScreen from '../pages/dashboard/ChangePasswordScreen.jsx';
 
 // Pages inside src/pages/auth/
 import LoginPage from '../pages/auth/LoginPage.jsx';
@@ -37,6 +43,54 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/history"
+            element={
+              <ProtectedRoute>
+                <HistoryScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/transactions"
+            element={
+              <ProtectedRoute>
+                <TransactionsScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/voice"
+            element={
+              <ProtectedRoute>
+                <VoiceScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/profile/edit"
+            element={
+              <ProtectedRoute>
+                <EditProfileScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/profile/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePasswordScreen />
               </ProtectedRoute>
             }
           />

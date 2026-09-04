@@ -1,24 +1,24 @@
 .btn {
   width: 100%;
   padding: 14px;
-  border-radius: 999px;
+  border-radius: 14px;
   font-weight: 700;
   font-size: 15px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-primary { background-color: var(--color-brand-500); color: #fff; }
+.btn-primary { background-color: var(--color-brand-500); color: #fff; box-shadow: 0 8px 18px rgba(22, 105, 245, 0.22); }
 .btn-primary:not(:disabled):hover { background-color: var(--color-brand-600); }
 
 .btn-secondary {
   background-color: var(--color-brand-50);
   color: var(--color-brand-900);
-  border: 1px solid rgba(108, 92, 231, 0.2);
+  border: 1px solid rgba(22, 105, 245, 0.2);
 }
-.btn-secondary:not(:disabled):hover { background-color: rgba(108, 92, 231, 0.1); }
+.btn-secondary:not(:disabled):hover { background-color: rgba(22, 105, 245, 0.1); }
 
 .btn-auth { background-color: var(--color-auth-primary); color: #fff; }
 .btn-auth:not(:disabled):hover { background-color: var(--color-auth-primary-hover); }

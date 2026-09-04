@@ -1,312 +1,254 @@
-.login-page-bg {
-  min-height: 100vh;
-  width: 100vw;
-  background-color: #0b0e14;
-  background-image: radial-gradient(circle at 50% 20%, rgba(126, 34, 206, 0.18) 0%, rgba(11, 14, 20, 1) 70%);
+.stitch-auth-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 24px;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 920px;
-  min-height: 520px;
-  background-color: #121622;
-  border: 1px solid rgba(168, 85, 247, 0.25);
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(147, 51, 234, 0.15);
+.stitch-auth-shell {
+  width: min(100%, 1120px);
+  min-height: 560px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1fr);
   overflow: hidden;
-  animation: floatInCenter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: white;
+  border: 1px solid #dbe4ef;
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14);
 }
 
-@keyframes floatInCenter {
-  0% {
-    opacity: 0;
-    transform: translateY(60px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Form Panel */
-.login-form-panel {
-  padding: 44px 40px;
+.stitch-auth-hero {
+  background: #f7f9fc;
+  border-right: 1px solid #e2e8f0;
+  padding: 34px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background-color: #121622;
+  align-items: flex-start;
 }
 
-.form-header-container {
+.stitch-auth-avatar-wrap {
+  align-self: center;
+  margin: 36px 0 30px;
+}
+
+.stitch-auth-hero h1 {
+  margin: 0;
+  color: #0504b5;
+  font-size: 34px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.stitch-auth-hero p {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.stitch-auth-panel {
+  padding: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stitch-form-header {
   margin-bottom: 20px;
 }
 
-.form-header {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #f8fafc;
+.stitch-form-header h2 {
   margin: 0;
+  color: #111827;
+  font-size: 28px;
+  line-height: 1.1;
 }
 
-.form-subheader {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  margin-top: 4px;
+.stitch-form-header p {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 14px;
 }
 
-.login-form {
+.stitch-auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 15px;
 }
 
-.input-group {
+.stitch-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stitch-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.label-row {
+.stitch-field span {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.field-label-row {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   align-items: center;
 }
 
-.input-label {
-  font-size: 0.8rem;
-  color: #cbd5e1;
-  font-weight: 500;
-  margin-left: 4px;
-}
-
-.forgot-password-link {
-  font-size: 0.775rem;
-  color: #c084fc;
+.field-label-row a,
+.stitch-auth-footer a,
+.stitch-legal-note a {
+  color: #1669f5;
+  font-weight: 850;
   text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
 }
 
-.forgot-password-link:hover {
-  color: #e9d5ff;
-  text-decoration: underline;
-}
-
-.dark-pill-input {
+.stitch-field input {
   width: 100%;
-  padding: 12px 18px;
-  border-radius: 30px;
-  border: 1px solid #2a324b;
-  font-size: 0.875rem;
+  border: 1px solid #d8dde6;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #111827;
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 15px;
+}
+
+.stitch-field input:focus {
   outline: none;
-  box-sizing: border-box;
-  color: #f1f5f9;
-  background-color: #181d2a;
-  transition: all 0.2s ease;
+  background: #ffffff;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.16);
 }
 
-.dark-pill-input::placeholder {
-  color: #64748b;
-}
-
-.dark-pill-input:focus {
-  border-color: #a855f7 !important;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25) !important;
-  background-color: #1a1f2c !important;
-}
-
-.primary-submit-btn {
-  margin-top: 8px;
+.stitch-submit-button {
   width: 100%;
-  padding: 13px;
-  border-radius: 30px;
-  border: none;
-  background: linear-gradient(90deg, #9333ea 0%, #7e22ce 100%);
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.95rem;
-  box-shadow: 0 8px 20px -4px rgba(147, 51, 234, 0.4);
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  background: #1677ff;
+  color: white;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 850;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 10px 22px rgba(22, 105, 245, 0.24);
+  margin-top: 6px;
 }
 
-.primary-submit-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -4px rgba(147, 51, 234, 0.5);
+.stitch-submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
-.primary-submit-btn:active {
-  transform: translateY(0);
-}
-
-.error-box {
-  color: #fca5a5;
-  background-color: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  margin-bottom: 12px;
-}
-
-.success-box {
-  color: #86efac;
-  background-color: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  margin-bottom: 12px;
-}
-
-.login-footer-text {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 0.825rem;
-  color: #94a3b8;
-}
-
-.login-link {
-  color: #c084fc;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-/* Terms & Privacy Footer */
-.terms-policy-footer {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 0.725rem;
-  color: #64748b;
+.stitch-status {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 13px;
   line-height: 1.4;
+  margin-bottom: 15px;
+  border: 1px solid transparent;
 }
 
-.sub-link {
-  color: #94a3b8;
-  text-decoration: underline;
-  transition: color 0.2s ease;
+.stitch-status.error {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
 }
 
-.sub-link:hover {
-  color: #c084fc;
+.stitch-status.success {
+  background: #ebf7ee;
+  color: #358e1e;
+  border-color: #bbf7d0;
 }
 
-/* Hero Panel */
-.login-hero-panel {
-  background: linear-gradient(145deg, #2e1065 0%, #1e1b4b 100%);
-  position: relative;
-  padding: 48px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  color: #ffffff;
-  overflow: hidden;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+.stitch-status.info,
+.stitch-status:not(.error):not(.success) {
+  background: #e8f3fe;
+  color: #0b57d0;
+  border-color: #bfdbfe;
 }
 
-.brand-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.brand-logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background-color: rgba(168, 85, 247, 0.25);
-  color: #c084fc;
-  font-size: 1.2rem;
-}
-
-.brand-name {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.5px;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 2;
-}
-
-.center-aligned {
+.stitch-auth-footer {
+  color: #64748b;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  font-size: 14px;
+  margin-top: 20px;
 }
 
-.security-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: rgba(168, 85, 247, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  margin-bottom: 16px;
+.stitch-legal-note {
+  margin: 18px auto 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  max-width: 340px;
 }
 
-.hero-title {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-  color: #f3e8ff;
+@media (min-width: 1025px) {
+  .stitch-auth-shell {
+    width: min(100%, 1180px);
+    grid-template-columns: minmax(360px, 0.88fr) minmax(480px, 1.12fr);
+  }
+
+  .stitch-auth-hero,
+  .stitch-auth-panel {
+    padding: 52px;
+  }
 }
 
-.hero-subtitle {
-  font-size: 0.875rem;
-  color: #c084fc;
-  line-height: 1.6;
-  max-width: 300px;
+@media (max-width: 1024px) and (min-width: 640px) {
+  .stitch-auth-shell {
+    width: min(100%, 960px);
+    grid-template-columns: minmax(280px, 0.82fr) minmax(360px, 1.18fr);
+  }
+
+  .stitch-auth-hero,
+  .stitch-auth-panel {
+    padding: 34px;
+  }
 }
 
-.topo-top-left {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  width: 200px;
-  height: 200px;
-  pointer-events: none;
+@media (max-width: 639px) {
+  .stitch-auth-page {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .stitch-auth-shell {
+    min-height: 100vh;
+    grid-template-columns: 1fr;
+    border-radius: 0;
+    border: 0;
+  }
+
+  .stitch-auth-hero {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 26px 22px 30px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .stitch-auth-avatar-wrap {
+    margin: 28px 0 22px;
+  }
+
+  .stitch-auth-panel {
+    padding: 28px 22px 34px;
+    justify-content: flex-start;
+  }
 }
 
-.topo-bottom-right {
-  position: absolute;
-  bottom: -10px;
-  right: -10px;
-  width: 220px;
-  height: 220px;
-  pointer-events: none;
-}
-
-.dot-grid {
-  position: absolute;
-  top: 36px;
-  right: 36px;
-  display: grid;
-  grid-template-columns: repeat(3, 6px);
-  gap: 8px;
-  opacity: 0.3;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  background-color: #c084fc;
-  border-radius: 50%;
+@media (max-width: 420px) {
+  .stitch-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
