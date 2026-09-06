@@ -1,11 +1,13 @@
 import React from 'react';
 import { AlertTriangle, FileText } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 import StitchLegalLayout from '../components/stitch/StitchLegalLayout';
 import './TermsPolicy.css';
 
 export default function TermsPage() {
+  const { t } = useLanguage();
   return (
-    <StitchLegalLayout icon={<FileText size={25} />} title="Terms of Service" updated="Last Updated: August 2026">
+    <StitchLegalLayout icon={<FileText size={25} />} title={t('termsOfService')} updated={t('lastUpdated')}>
       <section className="legal-section">
         <h2>1. Acceptance of Terms</h2>
         <p>

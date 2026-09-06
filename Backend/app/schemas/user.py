@@ -32,6 +32,18 @@ class ResetPasswordRequest(BaseModel):
     password: str = Field(min_length=8)
 
 
+class UpdateProfileRequest(BaseModel):
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    phone_number: str = Field(min_length=1, max_length=20)
+    email: EmailStr | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
 class UserOut(BaseModel):
     user_id: int
     first_name: str

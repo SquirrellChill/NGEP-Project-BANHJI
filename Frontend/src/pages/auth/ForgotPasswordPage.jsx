@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import { useLanguage } from '../../context/LanguageContext';
 import { forgotPassword } from '../../services/authService';
 import './LoginPage.css';
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
@@ -19,13 +21,13 @@ export default function ForgotPasswordPage() {
       await forgotPassword({ email });
       setStatusMsg({
         type: 'success',
-        text: 'A reset link has been sent to your email. Please check your inbox.',
+        text: t('resetLinkSent'),
       });
     } catch (err) {
       console.error('Failed to send verification code:', err);
       setStatusMsg({
         type: 'error',
-        text: err.response?.data?.detail || 'Failed to send verification code. Please try again.',
+        text: err.response?.data?.detail || t('resetLinkFailed'),
       });
     } finally {
       setLoading(false);
@@ -34,22 +36,22 @@ export default function ForgotPasswordPage() {
 
   return (
     <StitchAuthLayout
-      title="Account Security"
-      subtitle="Request a reset link and regain access to your workspace."
-      footer={<>Remembered your password? <Link to="/login">Back to Sign In</Link></>}
+      title={t('accountSecurity')}
+      subtitle={t('resetRequestSubtitle')}
+      footer={<>{t('rememberedPassword')} <Link to="/login">{t('backToSignIn')}</Link></>}
     >
       <div className="stitch-form-header">
-        <h2>Forgot Password</h2>
-        <p>Enter your email to receive a password reset link.</p>
+        <h2>{t('forgotPasswordTitle')}</h2>
+        <p>{t('enterEmailReset')}</p>
       </div>
       <StitchStatusMessage type={statusMsg.type}>{statusMsg.text}</StitchStatusMessage>
       <form onSubmit={handleSubmit} className="stitch-auth-form">
         <label className="stitch-field">
-          <span>Email Address</span>
+          <span>{t('emailAddress')}</span>
           <input type="email" required placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <button type="submit" className="stitch-submit-button" disabled={loading}>
-          {loading ? 'Sending Request...' : 'Send Verification Code'}
+          {loading ? t('sendingRequest') : t('sendReset')}
         </button>
       </form>
     </StitchAuthLayout>

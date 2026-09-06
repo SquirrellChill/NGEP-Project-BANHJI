@@ -1,29 +1,69 @@
-export default function ProfileForm({ profile }) {
+import { useEffect, useState } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
+
+export default function ProfileForm({ profile, onSubmit, saving = false, status = '' }) {
+  const { t } = useLanguage();
+  const [form, setForm] = useState({
+    firstName: profile.firstName || '',
+    lastName: profile.lastName || '',
+    phoneNumber: profile.phone || '',
+    email: profile.email || '',
+    businessName: profile.businessName || '',
+    address: profile.address || '',
+  });
+
+  useEffect(() => {
+    setForm({
+      firstName: profile.firstName || '',
+      lastName: profile.lastName || '',
+      phoneNumber: profile.phone || '',
+      email: profile.email || '',
+      businessName: profile.businessName || '',
+      address: profile.address || '',
+    });
+  }, [profile]);
+
+  const handleChange = (event) => {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit(form);
+  };
+
   return (
-    <form className="profile-form">
+    <form className="profile-form" onSubmit={handleSubmit}>
+      {status && <p className="review-error-message">{status}</p>}
       <label className="dash-field">
-        <span>Owner Name</span>
-        <input defaultValue={profile.name} />
+        <span>{t('firstName')}</span>
+        <input name="firstName" value={form.firstName} onChange={handleChange} required />
       </label>
       <label className="dash-field">
-        <span>Business Name</span>
-        <input defaultValue={profile.businessName} />
+        <span>{t('lastName')}</span>
+        <input name="lastName" value={form.lastName} onChange={handleChange} required />
       </label>
       <label className="dash-field">
-        <span>Phone Number</span>
-        <input defaultValue={profile.phone} />
+        <span>{t('businessName')}</span>
+        <input name="businessName" value={form.businessName} onChange={handleChange} />
       </label>
       <label className="dash-field">
-        <span>Email Address</span>
-        <input type="email" defaultValue={profile.email} />
+        <span>{t('phoneNumber')}</span>
+        <input name="phoneNumber" value={form.phoneNumber} onChange={handleChange} required />
       </label>
       <label className="dash-field">
-        <span>Address</span>
-        <textarea defaultValue={profile.address} rows={3} />
+        <span>{t('emailAddress')}</span>
+        <input type="email" name="email" value={form.email} onChange={handleChange} />
+      </label>
+      <label className="dash-field">
+        <span>{t('address')}</span>
+        <textarea name="address" value={form.address} onChange={handleChange} rows={3} />
       </label>
       <section className="screen-actions two-col">
-        <button className="outline-action" type="reset">Cancel</button>
-        <button className="primary-action" type="button">Save Changes</button>
+        <button className="outline-action" type="reset" disabled={saving}>{t('cancel')}</button>
+        <button className="primary-action" type="submit" disabled={saving}>
+          {saving ? t('saving') : t('saveChanges')}
+        </button>
       </section>
     </form>
   );

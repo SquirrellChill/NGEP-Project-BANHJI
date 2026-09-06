@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import { useLanguage } from '../../context/LanguageContext';
 import { resetPassword } from '../../services/authService';
 import './LoginPage.css';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const [password, setPassword] = useState('');
@@ -18,12 +20,12 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (!token) {
-      setStatusMsg({ type: 'error', text: 'Reset token is missing from the link.' });
+      setStatusMsg({ type: 'error', text: t('resetMissing') });
       return;
     }
 
     if (password !== confirmPassword) {
-      setStatusMsg({ type: 'error', text: 'Passwords do not match.' });
+      setStatusMsg({ type: 'error', text: t('passwordsNoMatch') });
       return;
     }
 
@@ -32,7 +34,7 @@ export default function ResetPasswordPage() {
 
     try {
       await resetPassword({ token, password });
-      setStatusMsg({ type: 'success', text: 'Password reset successful! Redirecting to login...' });
+      setStatusMsg({ type: 'success', text: t('resetSuccess') });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       console.error('Reset error:', err);
@@ -46,26 +48,26 @@ export default function ResetPasswordPage() {
 
   return (
     <StitchAuthLayout
-      title="Reset Password"
-      subtitle="Choose a strong password to keep your account secure."
-      footer={<Link to="/login">Back to Sign In</Link>}
+      title={t('resetPassword')}
+      subtitle={t('resetSubtitle')}
+      footer={<Link to="/login">{t('backToSignIn')}</Link>}
     >
       <div className="stitch-form-header">
-        <h2>Set New Password</h2>
-        <p>Enter your new security credentials below.</p>
+        <h2>{t('setNewPassword')}</h2>
+        <p>{t('enterNewPassword')}</p>
       </div>
       <StitchStatusMessage type={statusMsg.type}>{statusMsg.text}</StitchStatusMessage>
       <form onSubmit={handleSubmit} className="stitch-auth-form">
         <label className="stitch-field">
-          <span>New Password</span>
+          <span>{t('newPassword')}</span>
           <input type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         <label className="stitch-field">
-          <span>Confirm New Password</span>
+          <span>{t('confirmNewPassword')}</span>
           <input type="password" required placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
         </label>
         <button type="submit" className="stitch-submit-button" disabled={loading}>
-          {loading ? 'Updating Password...' : 'Reset Password'}
+          {loading ? t('updatingPassword') : t('resetPassword')}
         </button>
       </form>
     </StitchAuthLayout>

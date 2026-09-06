@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { getErrorMessage } from '../../services/authService';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,18 +36,18 @@ export default function LoginPage() {
 
   return (
     <StitchAuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to access your voice sales dashboard."
-      footer={<>New here? <Link to="/register">Create an account</Link></>}
+      title={t('welcomeBackTitle')}
+      subtitle={t('signInSubtitle')}
+      footer={<>{t('newHere')} <Link to="/register">{t('createAnAccount')}</Link></>}
     >
       <div className="stitch-form-header">
-        <h2>Sign In</h2>
-        <p>Enter your credentials to continue.</p>
+        <h2>{t('signIn')}</h2>
+        <p>{t('enterCredentials')}</p>
       </div>
       <StitchStatusMessage type="error">{error}</StitchStatusMessage>
       <form onSubmit={handleSubmit} className="stitch-auth-form">
         <label className="stitch-field">
-          <span>Email Address</span>
+          <span>{t('emailAddress')}</span>
           <input
             type="email"
             name="email"
@@ -57,8 +59,8 @@ export default function LoginPage() {
         </label>
         <label className="stitch-field">
           <span className="field-label-row">
-            Password
-            <Link to="/forgot-password">Forgot Password?</Link>
+            {t('password')}
+            <Link to="/forgot-password">{t('forgotPassword')}</Link>
           </span>
           <input
             type="password"
@@ -70,7 +72,7 @@ export default function LoginPage() {
           />
         </label>
         <button type="submit" disabled={loading} className="stitch-submit-button">
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? t('signingIn') : t('signIn')}
         </button>
       </form>
     </StitchAuthLayout>

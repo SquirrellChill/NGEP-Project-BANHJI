@@ -1,11 +1,13 @@
 import React from 'react';
 import { Lock, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 import StitchLegalLayout from '../components/stitch/StitchLegalLayout';
 import './TermsPolicy.css';
 
 export default function PrivacyPage() {
+  const { t } = useLanguage();
   return (
-    <StitchLegalLayout icon={<ShieldCheck size={25} />} title="Privacy Policy" updated="Last Updated: August 2026">
+    <StitchLegalLayout icon={<ShieldCheck size={25} />} title={t('privacyPolicy')} updated={t('lastUpdated')}>
       <section className="legal-section">
         <h2>1. Information We Collect</h2>
         <p>To provide accurate bookkeeping, KotChomnol collects the following information:</p>

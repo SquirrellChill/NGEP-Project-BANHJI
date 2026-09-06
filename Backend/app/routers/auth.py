@@ -9,11 +9,13 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models.user import User
 from app.repositories import user_repository as user_repo
 from app.schemas.user import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
+    UpdateProfileRequest,
     UserOut,
     VerifyEmailRequest,
 )
@@ -209,6 +211,57 @@ def logout(current_user: User = Depends(get_current_user)):
 @router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {"success": True, "data": {"user": UserOut.model_validate(current_user)}}
+
+
+@router.put("/me")
+def update_me(
+    payload: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if payload.email and payload.email != current_user.email:
+        existing = user_repo.find_user_by_email(db, payload.email)
+        if existing and existing.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists.",
+            )
+    if payload.phone_number != current_user.phone_number:
+        existing = user_repo.find_user_by_phone_number(db, payload.phone_number)
+        if existing and existing.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this phone number already exists.",
+            )
+
+    current_user.first_name = payload.first_name
+    current_user.last_name = payload.last_name
+    current_user.phone_number = payload.phone_number
+    current_user.email = payload.email
+    saved_user = user_repo.save_user(db, current_user)
+
+    return {
+        "success": True,
+        "message": "Profile updated successfully",
+        "data": {"user": UserOut.model_validate(saved_user)},
+    }
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.password_hash:
+        raise HTTPException(status_code=400, detail="This account does not have a password set.")
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    user_repo.save_user(db, current_user)
+
+    return {"success": True, "message": "Password changed successfully"}
 
 
 @router.post("/forgot-password")

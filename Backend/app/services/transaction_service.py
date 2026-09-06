@@ -67,6 +67,38 @@ def create_sale(db: Session, user_id: int, payload: SaleCreate):
     )
 
 
+def update_sale(db: Session, user_id: int, sale_id: int, payload: SaleCreate):
+    """Replace a seller's sale with a confirmed edited version."""
+    sale = repo.find_sale(db, user_id, sale_id)
+    if sale is None:
+        return None
+
+    rows = []
+    totals = {currency: Decimal("0") for currency in CURRENCIES}
+
+    for item in payload.items:
+        amount = _money(item.quantity * item.unit_price)
+        totals[item.currency] += amount
+        rows.append(
+            {
+                "description": item.description,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "currency": item.currency,
+                "amount": amount,
+            }
+        )
+
+    return repo.update_sale(
+        db,
+        sale=sale,
+        sale_date=payload.sale_date,
+        total_khr=_money(totals["KHR"]),
+        total_usd=_money(totals["USD"]),
+        items=rows,
+    )
+
+
 def resolve_period(period: str, anchor: date | None = None) -> tuple[date, date]:
     """Turn a period name into inclusive start and end dates.
 

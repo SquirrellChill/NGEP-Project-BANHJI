@@ -1,9 +1,11 @@
 import { LayoutDashboard, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import StitchBrand from './StitchBrand';
 
 export default function StitchPublicShell({ children, isAuthenticated = false }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="stitch-public-page">
@@ -12,17 +14,17 @@ export default function StitchPublicShell({ children, isAuthenticated = false })
           <StitchBrand compact />
         </button>
         <nav aria-label="Public navigation">
-          <Link to="/terms">Terms</Link>
-          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">{t('terms')}</Link>
+          <Link to="/privacy">{t('privacy')}</Link>
           {isAuthenticated ? (
             <button className="stitch-primary-small" type="button" onClick={() => navigate('/dashboard')}>
               <LayoutDashboard size={16} />
-              Dashboard
+              {t('dashboard')}
             </button>
           ) : (
             <button className="stitch-primary-small" type="button" onClick={() => navigate('/login')}>
               <LogIn size={16} />
-              Sign In
+              {t('signIn')}
             </button>
           )}
         </nav>

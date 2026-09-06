@@ -1,9 +1,11 @@
 import { Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import UserAvatar from './UserAvatar';
 
 export default function ProfileCard({ profile }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <section className="profile-card">
@@ -15,7 +17,7 @@ export default function ProfileCard({ profile }) {
       </div>
       <button type="button" onClick={() => navigate('/dashboard/profile/edit')}>
         <Edit size={14} />
-        Edit
+        {t('edit')}
       </button>
     </section>
   );

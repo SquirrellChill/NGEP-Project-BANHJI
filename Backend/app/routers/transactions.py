@@ -69,6 +69,19 @@ def get_summary(
 
 
 # Declared after /summary so the literal path isn't swallowed by {sale_id}.
+@router.put("/{sale_id}", response_model=SaleRead)
+def update_sale(
+    sale_id: int,
+    payload: SaleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sale = service.update_sale(db, current_user.user_id, sale_id, payload)
+    if sale is None:
+        raise HTTPException(404, "Sale not found.")
+    return sale
+
+
 @router.get("/{sale_id}", response_model=SaleRead)
 def get_sale(
     sale_id: int,

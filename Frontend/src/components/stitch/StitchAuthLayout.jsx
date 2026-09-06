@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import StitchAssistantAvatar from './StitchAssistantAvatar';
 import StitchBrand from './StitchBrand';
 
 export default function StitchAuthLayout({ title, subtitle, children, footer }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="stitch-auth-page">
@@ -22,7 +24,7 @@ export default function StitchAuthLayout({ title, subtitle, children, footer }) 
           {children}
           {footer && <div className="stitch-auth-footer">{footer}</div>}
           <p className="stitch-legal-note">
-            By continuing, you agree to our <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
+            {t('termsAgree')} <Link to="/terms">{t('terms')}</Link> {t('and')} <Link to="/privacy">{t('privacyPolicy')}</Link>.
           </p>
         </section>
       </main>

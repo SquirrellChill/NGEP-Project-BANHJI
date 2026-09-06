@@ -45,6 +45,29 @@ def create_sale(
     return sale
 
 
+def update_sale(
+    db: Session,
+    sale: Sale,
+    sale_date: date,
+    total_khr: Decimal,
+    total_usd: Decimal,
+    items: list[dict],
+) -> Sale:
+    """Replace a sale's header date and rows, then persist recalculated totals."""
+    sale.sale_date = sale_date
+    sale.total_khr = total_khr
+    sale.total_usd = total_usd
+    sale.items.clear()
+    db.flush()
+
+    for row in items:
+        sale.items.append(SaleItem(**row))
+
+    db.commit()
+    db.refresh(sale)
+    return sale
+
+
 def find_sale(db: Session, user_id: int, sale_id: int) -> Sale | None:
     return (
         db.query(Sale)

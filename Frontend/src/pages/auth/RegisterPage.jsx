@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import { useLanguage } from '../../context/LanguageContext';
 import { getErrorMessage, register } from '../../services/authService';
 import './LoginPage.css';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -38,40 +40,40 @@ export default function RegisterPage() {
 
   return (
     <StitchAuthLayout
-      title="Create Account"
-      subtitle="Set up your shop workspace and start recording daily sales."
-      footer={<>Already have an account? <Link to="/login">Sign in</Link></>}
+      title={t('createAccount')}
+      subtitle={t('signInSubtitle')}
+      footer={<>{t('alreadyAccount')} <Link to="/login">{t('signIn')}</Link></>}
     >
       <div className="stitch-form-header">
-        <h2>Sign Up</h2>
-        <p>Enter your details to create your workspace.</p>
+        <h2>{t('signUp')}</h2>
+        <p>{t('enterDetails')}</p>
       </div>
       <StitchStatusMessage type="error">{error}</StitchStatusMessage>
       <form onSubmit={handleSubmit} className="stitch-auth-form">
         <div className="stitch-form-grid">
           <label className="stitch-field">
-            <span>First Name</span>
+            <span>{t('firstName')}</span>
             <input name="firstName" value={formData.firstName} onChange={handleChange} required />
           </label>
           <label className="stitch-field">
-            <span>Last Name</span>
+            <span>{t('lastName')}</span>
             <input name="lastName" value={formData.lastName} onChange={handleChange} required />
           </label>
         </div>
         <label className="stitch-field">
-          <span>Phone Number</span>
+          <span>{t('phoneNumber')}</span>
           <input type="tel" name="phoneNumber" placeholder="+855 12 345 678" value={formData.phoneNumber} onChange={handleChange} required />
         </label>
         <label className="stitch-field">
-          <span>Email Address</span>
+          <span>{t('emailAddress')}</span>
           <input type="email" name="email" placeholder="name@example.com" value={formData.email} onChange={handleChange} required />
         </label>
         <label className="stitch-field">
-          <span>Password</span>
+          <span>{t('password')}</span>
           <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
         </label>
         <button type="submit" disabled={loading} className="stitch-submit-button">
-          {loading ? 'Registering...' : 'Register'}
+          {loading ? t('registering') : t('register')}
         </button>
       </form>
     </StitchAuthLayout>

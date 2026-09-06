@@ -1,18 +1,36 @@
-import { Mic, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
+import { ChevronUp, Mic, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 import Waveform from './Waveform';
 
-export default function VoiceAssistantPanel({ mode, onModeChange }) {
+export default function VoiceAssistantPanel({
+  mode,
+  transcript = '',
+  error = '',
+  elapsed = '00:00',
+  onStart,
+  onPause,
+  onStop,
+  onRestart,
+  onSend,
+  question = '',
+  answerText = '',
+  onAnswerChange,
+  onAnswerSubmit,
+  isAnswering = false,
+}) {
+  const { t } = useLanguage();
   const isRecording = mode === 'listening' || mode === 'transcribing' || mode === 'clarification';
-  const title = mode === 'standby' ? "Hi I'm Your Assistant" : mode === 'paused' ? 'Paused' : mode === 'captured' ? 'Speech Captured' : 'Recording...';
-  const subtitle = mode === 'standby' ? 'for Daily Updates' : 'Listening for your sale details';
+  const title = mode === 'standby' ? t('assistantTitle') : mode === 'paused' ? t('paused') : mode === 'captured' ? t('captured') : mode === 'transcribing' ? t('transcribing') : mode === 'clarification' ? t('answerQuestion') : t('recording');
+  const subtitle = mode === 'standby' ? t('assistantSubtitle') : t('listeningSale');
 
   if (mode === 'standby') {
     return (
       <section className="voice-standby">
         <AssistantAvatar />
         <h2>{title}<br />{subtitle}</h2>
-        <button className="voice-start-button" type="button" onClick={() => onModeChange('listening')}>
-          <span>Tap the Micro to speak...</span>
+        {error && <p className="review-error-message">{error}</p>}
+        <button className="voice-start-button" type="button" onClick={onStart}>
+          <span>{t('tapMic')}</span>
           <b><Mic size={20} fill="currentColor" /></b>
         </button>
       </section>
@@ -31,34 +49,47 @@ export default function VoiceAssistantPanel({ mode, onModeChange }) {
       {(mode === 'transcribing' || mode === 'listening' || mode === 'paused' || mode === 'captured') && (
         <section className="live-transcription-card">
           <div>
-            <h3>Live transcription</h3>
-            <button type="button" aria-label="Collapse transcription">⌄</button>
+            <h3>{t('liveTranscription')}</h3>
+            <button type="button" aria-label="Collapse transcription"><ChevronUp size={18} /></button>
           </div>
-          <p>Sold two milk teas and two green teas for ten dollars total.</p>
+          <p>{transcript || (mode === 'captured' ? t('readyToSend') : t('recordingAudio'))}</p>
+          {error && <p className="review-error-message">{error}</p>}
         </section>
       )}
       {mode === 'clarification' && (
         <section className="chat-history">
-          <p className="chat-bubble user">Sold coffee and tea.</p>
-          <p className="chat-bubble assistant">Can you confirm the quantities and prices?</p>
+          {transcript && <p className="chat-bubble user">{transcript}</p>}
+          <p className="chat-bubble assistant">{question}</p>
+          {error && <p className="review-error-message">{error}</p>}
+          <form className="followup-form" onSubmit={onAnswerSubmit}>
+            <input
+              value={answerText}
+              onChange={(event) => onAnswerChange(event.target.value)}
+              placeholder={t('followupPlaceholder')}
+              disabled={isAnswering}
+            />
+            <button className="primary-action" type="submit" disabled={isAnswering || !answerText.trim()}>
+              {isAnswering ? t('sendingAnswer') : t('sendAnswer')}
+            </button>
+          </form>
         </section>
       )}
       <section className="voice-control-drawer">
-        <div className="voice-timer">{mode === 'paused' ? '00:12' : '00:18'}</div>
+        <div className="voice-timer">{elapsed}</div>
         <Waveform active={isRecording} />
         <div className="voice-primary-actions">
-          <button type="button" aria-label={mode === 'paused' ? 'Play recording' : 'Pause recording'} onClick={() => onModeChange(mode === 'paused' ? 'listening' : 'paused')}>
+          <button type="button" aria-label={mode === 'paused' ? 'Play recording' : 'Pause recording'} onClick={onPause} disabled={mode === 'captured' || mode === 'transcribing' || mode === 'clarification'}>
             {mode === 'paused' ? <Play size={22} fill="currentColor" /> : <Pause size={22} fill="currentColor" />}
           </button>
-          <button className="stop" type="button" aria-label="Stop recording" onClick={() => onModeChange('captured')}>
+          <button className="stop" type="button" aria-label="Stop recording" onClick={onStop} disabled={mode === 'captured' || mode === 'transcribing' || mode === 'clarification'}>
             <Square size={20} fill="currentColor" />
           </button>
         </div>
         <div className="voice-secondary-actions">
-          <button type="button" aria-label="Restart recording" onClick={() => onModeChange('listening')}>
+          <button type="button" aria-label="Restart recording" onClick={onRestart} disabled={mode === 'transcribing' || isAnswering}>
             <RotateCcw size={24} />
           </button>
-          <button className="send" type="button" aria-label="Send recording" onClick={() => onModeChange('clarification')}>
+          <button className="send" type="button" aria-label="Send recording" onClick={onSend} disabled={mode !== 'captured'}>
             <Send size={20} fill="currentColor" />
           </button>
         </div>

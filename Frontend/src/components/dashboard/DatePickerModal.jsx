@@ -1,27 +1,51 @@
 import { X } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
+import { formatLocalDate } from '../../utils/sales';
 
-const days = Array.from({ length: 31 }, (_, index) => index + 1);
+export default function DatePickerModal({ selectedDate = new Date(), onSelect, onClose }) {
+  const { t } = useLanguage();
+  const selected = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+  const current = Number.isNaN(selected.getTime()) ? new Date() : selected;
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
 
-export default function DatePickerModal({ onClose }) {
   return (
-    <div className="modal-scrim" role="dialog" aria-modal="true" aria-label="Select date">
+    <div className="modal-scrim" role="dialog" aria-modal="true" aria-label={t('selectDate')}>
       <div className="date-picker-panel">
         <div className="modal-title-row">
-          <h2>Select Date</h2>
-          <button className="plain-icon-button" type="button" onClick={onClose} aria-label="Close date picker">
+          <h2>{t('selectDate')}</h2>
+          <button className="plain-icon-button" type="button" onClick={onClose} aria-label={t('selectDate')}>
             <X size={19} />
           </button>
         </div>
-        <div className="calendar-month">March 2026</div>
+        <input
+          className="native-date-input"
+          type="date"
+          value={formatLocalDate(current)}
+          onChange={(event) => onSelect(new Date(`${event.target.value}T00:00:00`))}
+        />
+        <div className="calendar-month">
+          {current.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+        </div>
         <div className="calendar-grid">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <span className="calendar-weekday" key={`${day}-${index}`}>{day}</span>
           ))}
-          {days.map((day) => (
-            <button className={day === 15 ? 'selected' : ''} type="button" key={day} onClick={onClose}>
-              {day}
-            </button>
+          {Array.from({ length: firstDay }, (_, index) => (
+            <span className="calendar-empty-day" key={`empty-${index}`} />
           ))}
+          {days.map((day) => {
+            const date = new Date(year, month, day);
+            const selectedClass = formatLocalDate(date) === formatLocalDate(current) ? 'selected' : '';
+            return (
+              <button className={selectedClass} type="button" key={day} onClick={() => onSelect(date)}>
+                {day}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

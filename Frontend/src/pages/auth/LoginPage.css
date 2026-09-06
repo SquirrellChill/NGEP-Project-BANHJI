@@ -192,6 +192,60 @@
   max-width: 340px;
 }
 
+html[data-theme='dark'] .stitch-auth-shell {
+  background: #111827;
+  border-color: #334155;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme='dark'] .stitch-auth-hero {
+  background: #172033;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .stitch-auth-hero h1,
+html[data-theme='dark'] .stitch-form-header h2,
+html[data-theme='dark'] .stitch-field span {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .stitch-auth-hero p,
+html[data-theme='dark'] .stitch-form-header p,
+html[data-theme='dark'] .stitch-auth-footer,
+html[data-theme='dark'] .stitch-legal-note {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .stitch-field input {
+  background: #172033;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .stitch-field input:focus {
+  background: #111827;
+  border-color: #4f9cff;
+}
+
+html[data-theme='dark'] .stitch-status.error {
+  background: #3f1220;
+  color: #fecdd3;
+  border-color: #9f1239;
+}
+
+html[data-theme='dark'] .stitch-status.success {
+  background: #12351f;
+  color: #bbf7d0;
+  border-color: #166534;
+}
+
+html[data-theme='dark'] .stitch-status.info,
+html[data-theme='dark'] .stitch-status:not(.error):not(.success) {
+  background: #132b4d;
+  color: #bfdbfe;
+  border-color: #1d4ed8;
+}
+
 @media (min-width: 1025px) {
   .stitch-auth-shell {
     width: min(100%, 1180px);

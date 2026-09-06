@@ -1,8 +1,12 @@
 import { Calendar, TrendingUp } from 'lucide-react';
-import { formatKHR, formatRiel, formatUSD } from '../../utils/currency';
+import { useLanguage } from '../../context/LanguageContext';
+import { formatKHR, formatUSD } from '../../utils/currency';
 
 export default function RevenueCard({ summary, variant = 'home' }) {
+  const { t } = useLanguage();
   const label = variant === 'history' ? summary.filteredLabel : summary.label;
+  const amountKHR = summary.amountKHR || 0;
+  const amountUSD = summary.amountUSD || 0;
 
   return (
     <section className="revenue-summary-card">
@@ -19,17 +23,17 @@ export default function RevenueCard({ summary, variant = 'home' }) {
         )}
       </div>
       <div className="revenue-main-row">
-        <strong>{formatKHR(summary.amountKHR)}</strong>
-        {variant === 'history' && <span>({formatUSD(summary.amountUSD)})</span>}
+        <strong>{formatKHR(amountKHR)}</strong>
+        <span>({formatUSD(amountUSD)})</span>
       </div>
       {variant === 'home' && (
         <>
           <p className="revenue-equivalent">
-            Equivalent: <b>{formatUSD(summary.amountUSD)}</b> <span>(1$= {formatRiel(summary.exchangeRate)})</span>
+            {t('usdTotal')} <b>{formatUSD(amountUSD)}</b> <span>{t('khrSeparate')}</span>
           </p>
           <div className="revenue-divider" />
           <div className="revenue-orders">
-            <span>Total Orders</span>
+            <span>{t('totalOrders')}</span>
             <b>{summary.totalOrders}</b>
           </div>
         </>

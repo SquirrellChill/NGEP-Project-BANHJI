@@ -1,10 +1,12 @@
 import { Calendar, ChevronDown } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function HistoryFilters({ activeFilter, onChange, onPickDate }) {
+  const { t } = useLanguage();
   const filters = [
-    ['today', 'Today'],
-    ['week', 'This Week'],
-    ['month', 'This Month'],
+    ['today', t('today')],
+    ['week', t('thisWeek')],
+    ['month', t('thisMonth')],
   ];
 
   return (

@@ -16,6 +16,20 @@ export const logout = () => nodeApi.post('/auth/logout');
 
 export const getMe = () => nodeApi.get('/auth/me');
 
+export const updateMe = ({ firstName, lastName, phoneNumber, email }) =>
+  nodeApi.put('/auth/me', {
+    first_name: firstName,
+    last_name: lastName,
+    phone_number: phoneNumber,
+    email: email || null,
+  });
+
+export const changePassword = ({ currentPassword, newPassword }) =>
+  nodeApi.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+
 export const verifyEmail = ({ email, code }) =>
   nodeApi.post('/auth/verify-email', { email, code });
 

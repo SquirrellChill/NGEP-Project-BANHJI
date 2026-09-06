@@ -700,6 +700,37 @@
   font-weight: 850;
 }
 
+.review-error-message {
+  margin: -8px 8px 18px;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.empty-state-copy {
+  margin: 0;
+  padding: 16px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.static-row {
+  cursor: default;
+}
+
+.native-date-input {
+  width: 100%;
+  border: 1px solid #d8dee8;
+  border-radius: 12px;
+  padding: 11px 12px;
+  margin-bottom: 14px;
+  font: inherit;
+  color: #1f2937;
+}
+
 .screen-actions {
   gap: 14px;
   margin-top: auto;
@@ -730,6 +761,13 @@
 .primary-action {
   background: #1677ff;
   color: white;
+}
+
+.primary-action:disabled,
+.outline-action:disabled,
+.danger-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .outline-action {
@@ -1496,6 +1534,161 @@
   margin-top: 14px;
 }
 
+.followup-form {
+  display: flex;
+  gap: 10px;
+}
+
+.followup-form input {
+  flex: 1;
+  border: 1px solid #d8dde6;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #111827;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.followup-form .primary-action {
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+html[data-theme='dark'] .mobile-page-bg,
+html[data-theme='dark'] .mobile-app-shell {
+  background: #0b1120;
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .mobile-app-shell,
+html[data-theme='dark'] .voice-page-bg .mobile-app-shell {
+  background: #0b1120;
+}
+
+html[data-theme='dark'] .app-profile-left h1,
+html[data-theme='dark'] .welcome-greeting h2,
+html[data-theme='dark'] .section-heading,
+html[data-theme='dark'] .screen-header h1,
+html[data-theme='dark'] .icon-section-title h2,
+html[data-theme='dark'] .summary-metric strong,
+html[data-theme='dark'] .product-table-card th,
+html[data-theme='dark'] .product-table-card td,
+html[data-theme='dark'] .review-head,
+html[data-theme='dark'] .review-row,
+html[data-theme='dark'] .sale-total-section div,
+html[data-theme='dark'] .modal-title-row h2,
+html[data-theme='dark'] .dash-field,
+html[data-theme='dark'] .quantity-stepper strong,
+html[data-theme='dark'] .calendar-month,
+html[data-theme='dark'] .transaction-saved-view h1,
+html[data-theme='dark'] .recording-indicator h2,
+html[data-theme='dark'] .voice-standby h2,
+html[data-theme='dark'] .settings-list strong,
+html[data-theme='dark'] .password-hero h1,
+html[data-theme='dark'] .transaction-row-button strong,
+html[data-theme='dark'] .transaction-amount,
+html[data-theme='dark'] .quick-action-copy strong,
+html[data-theme='dark'] .quick-action-arrow {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .app-profile-left p,
+html[data-theme='dark'] .welcome-greeting p,
+html[data-theme='dark'] .transaction-row-button small,
+html[data-theme='dark'] .settings-list small,
+html[data-theme='dark'] .password-hero p,
+html[data-theme='dark'] .recording-indicator p,
+html[data-theme='dark'] .voice-timer,
+html[data-theme='dark'] .live-transcription-card p,
+html[data-theme='dark'] .chat-bubble,
+html[data-theme='dark'] .empty-state-copy,
+html[data-theme='dark'] .quick-action-copy span,
+html[data-theme='dark'] .success-copy small {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .transaction-list-card,
+html[data-theme='dark'] .product-table-card,
+html[data-theme='dark'] .review-items-card,
+html[data-theme='dark'] .settings-list,
+html[data-theme='dark'] .edit-item-panel,
+html[data-theme='dark'] .date-picker-panel,
+html[data-theme='dark'] .live-transcription-card,
+html[data-theme='dark'] .chat-history,
+html[data-theme='dark'] .sale-total-section {
+  background: #111827;
+  border-color: #334155;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme='dark'] .quick-action-card,
+html[data-theme='dark'] .product-summary-card,
+html[data-theme='dark'] .voice-control-drawer,
+html[data-theme='dark'] .history-filter-bar,
+html[data-theme='dark'] .quantity-stepper,
+html[data-theme='dark'] .currency-toggle,
+html[data-theme='dark'] .chat-bubble.assistant {
+  background: #172033;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .bottom-tab-nav {
+  background: rgba(17, 24, 39, 0.96);
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .tab-nav-item,
+html[data-theme='dark'] .notification-button,
+html[data-theme='dark'] .icon-soft-btn,
+html[data-theme='dark'] .plain-icon-button,
+html[data-theme='dark'] .live-transcription-card button {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .tab-nav-item.active,
+html[data-theme='dark'] .text-action,
+html[data-theme='dark'] .history-filter-bar .date-filter-button,
+html[data-theme='dark'] .summary-metric small,
+html[data-theme='dark'] .voice-secondary-actions button {
+  color: #93c5fd;
+}
+
+html[data-theme='dark'] .outline-action,
+html[data-theme='dark'] .dash-field input,
+html[data-theme='dark'] .dash-field textarea,
+html[data-theme='dark'] .native-date-input,
+html[data-theme='dark'] .calendar-grid button,
+html[data-theme='dark'] .input-action-wrap,
+html[data-theme='dark'] .currency-input-wrap,
+html[data-theme='dark'] .password-input-field div,
+html[data-theme='dark'] .followup-form input {
+  background: #172033;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .language-toggle {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .language-toggle i {
+  background: #93c5fd;
+}
+
+html[data-theme='dark'] .success-banner,
+html[data-theme='dark'] .saved-icon-badge {
+  background: #12351f;
+}
+
+html[data-theme='dark'] .success-copy strong {
+  color: #86efac;
+}
+
+html[data-theme='dark'] .bottom-mic-button {
+  outline-color: #0b1120;
+}
+
 @keyframes waveform {
   from {
     transform: scaleY(0.62);
@@ -1536,6 +1729,10 @@
   .form-grid-two,
   .screen-actions.two-col {
     grid-template-columns: 1fr;
+  }
+
+  .followup-form {
+    flex-direction: column;
   }
 }
 
