@@ -18,3 +18,6 @@ node_modules/
 .vscode/
 *.zip
 docker-compose.yml
+__pycache__/
+*.py[cod]
+.venv/
