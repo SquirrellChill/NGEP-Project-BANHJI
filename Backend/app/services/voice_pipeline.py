@@ -6,9 +6,14 @@ input dict, invokes the graph once start-to-finish, and returns
 state["result"]. The client holds the session between calls.
 
 Three entry points share the same tail:
-  audio    -> transcribe -> extract ----v
-  followup -> apply_answer -------------> reconcile -> infer_currency -> route
-  resolve  -> (record already built) ---^
+  audio    -> transcribe -> [unclear check] -> extract ----v
+  followup -> apply_answer -----------------------------------> reconcile -> infer_currency -> route
+  resolve  -> (record already built) ------------------------^
+
+A transcript too short to mean anything (silence, noise, a stuck mic) short-
+circuits straight to UNCLEAR_AUDIO right after transcription, before extract()
+or the clarification loop ever runs — asking "what did you sell?" in response
+to noise is a worse experience than just saying "didn't catch that."
 """
 
 from typing import Optional, TypedDict
@@ -20,6 +25,7 @@ from app.services import catalog, extractor, followup, transcriber
 NEEDS_FOLLOWUP = "needs_followup"
 NEEDS_CONFIRMATION = "needs_confirmation"
 MANUAL_ENTRY = "manual_entry"
+UNCLEAR_AUDIO = "unclear_audio"
 
 
 class SaleState(TypedDict, total=False):
@@ -104,6 +110,25 @@ def manual_entry_node(state: SaleState) -> dict:
     return {"result": _base_result(MANUAL_ENTRY, state)}
 
 
+def unclear_audio_node(state: SaleState) -> dict:
+    """Nothing usable came out of transcription. No record was built yet --
+    unlike the other terminal nodes, there's no extraction to report on, just
+    a prompt to try recording again."""
+    return {"result": {
+        "status": UNCLEAR_AUDIO,
+        "transcript": state.get("transcript", ""),
+        "record": None,
+        "attempts": state.get("attempts", 0),
+        "item_count": 0,
+        "missing_slots": [],
+        "question": None,
+        "asked_field": None,
+        "asked_index": None,
+        "currency_notes": [],
+        "catalog_matches": [],
+    }}
+
+
 def ask_followup_node(state: SaleState) -> dict:
     index, field, question = followup.next_question(state["record"])
     result = _base_result(NEEDS_FOLLOWUP, state)
@@ -142,6 +167,12 @@ def route_entry(state: SaleState) -> str:
     return "reconcile"  # entry == "resolve" — record is already built
 
 
+def route_after_transcribe(state: SaleState) -> str:
+    if extractor.is_unclear(state.get("transcript", "")):
+        return "unclear_audio"
+    return "extract"
+
+
 def route_after_currency(state: SaleState) -> str:
     if followup.is_complete(state["record"]):
         return "confirm"
@@ -161,13 +192,18 @@ builder.add_node("reconcile", reconcile_node)
 builder.add_node("confirm", confirm_node)
 builder.add_node("manual_entry", manual_entry_node)
 builder.add_node("ask_followup", ask_followup_node)
+builder.add_node("unclear_audio", unclear_audio_node)
 
 builder.add_conditional_edges(
     START,
     route_entry,
     {"transcribe": "transcribe", "apply_answer": "apply_answer", "reconcile": "reconcile"},
 )
-builder.add_edge("transcribe", "extract")
+builder.add_conditional_edges(
+    "transcribe",
+    route_after_transcribe,
+    {"extract": "extract", "unclear_audio": "unclear_audio"},
+)
 builder.add_edge("extract", "reconcile")
 builder.add_edge("apply_answer", "reconcile")
 builder.add_edge("reconcile", "infer_currency")
@@ -179,6 +215,7 @@ builder.add_conditional_edges(
 builder.add_edge("confirm", END)
 builder.add_edge("manual_entry", END)
 builder.add_edge("ask_followup", END)
+builder.add_edge("unclear_audio", END)
 
 sale_graph = builder.compile()
 

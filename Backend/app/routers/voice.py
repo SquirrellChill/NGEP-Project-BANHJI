@@ -10,6 +10,8 @@ unauthenticated when it ran as its own process; folding it into this app means
 it now sits behind the same guard as everything else.
 """
 
+import json
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -21,6 +23,7 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.repositories import transaction_repository as tx_repo
 from app.services import voice_pipeline
+from app.services.transcriber import transcribe as transcribe_audio
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -82,7 +85,7 @@ async def answer_followup(
     payload: FollowupRequest,
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    """The seller answered the clarification question. Continue the loop."""
+    """The seller TYPED an answer to the clarification question. Continue the loop."""
     if not payload.answer_text.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Empty follow-up answer.")
 
@@ -95,6 +98,72 @@ async def answer_followup(
         payload.asked_index,
         payload.asked_field,
         payload.asked_question,
+    )
+
+
+@router.post("/followup-audio", status_code=status.HTTP_200_OK)
+async def answer_followup_audio(
+    audio: UploadFile = File(...),
+    transcript: str = Form(...),
+    record: str = Form(...),  # JSON-encoded dict — multipart can't carry a
+                               # nested object directly, only flat form fields
+    attempts: int = Form(0),
+    asked_index: int = Form(0),
+    asked_field: str = Form("item"),
+    asked_question: str = Form(""),
+    mime_type: str | None = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """The seller SPOKE their answer to the clarification question.
+
+    Same clarification loop as /followup — the only difference is the
+    answer arrives as audio instead of typed text. We transcribe it first,
+    then hand it to the exact same voice_pipeline.process_followup() call
+    that the typed path uses, so the merge/currency/routing logic never
+    has to know or care which input method the seller chose.
+    """
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Empty audio upload.")
+    if len(audio_bytes) > MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "That recording is too long. Record the sale in shorter parts.",
+        )
+
+    try:
+        record_dict = json.loads(record)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "`record` must be valid JSON."
+        ) from exc
+
+    resolved_mime = mime_type or audio.content_type or "audio/webm"
+    # Reuse this seller's catalogue for the follow-up transcription too --
+    # a spoken price/quantity answer rarely needs it, but a spoken item-name
+    # correction (e.g. answering an "item" follow-up) benefits the same way
+    # the original recording did.
+    catalog = await run_in_threadpool(_catalog_for, db, current_user.user_id)
+
+    answer_text = await run_in_threadpool(
+        transcribe_audio, audio_bytes, resolved_mime, catalog
+    )
+    if not answer_text.strip():
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Couldn't hear a clear answer in that recording. Please try again.",
+        )
+
+    return await _run(
+        voice_pipeline.process_followup,
+        transcript,
+        record_dict,
+        answer_text,
+        attempts,
+        asked_index,
+        asked_field,
+        asked_question,
     )
 
 

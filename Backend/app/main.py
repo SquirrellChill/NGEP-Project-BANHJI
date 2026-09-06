@@ -25,7 +25,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(auth_telegram.router)
 app.include_router(telegram_test_page.router)
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
+# app.include_router(auth.router, prefix="/auth", tags=["auth"])
 
 app.include_router(dashboard.router)
 app.include_router(transactions.router)
