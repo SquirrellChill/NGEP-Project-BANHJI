@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -46,6 +47,23 @@ class FollowupRequest(BaseModel):
     asked_index: int = 0
     asked_field: str = "item"
     asked_question: str = ""
+
+
+class ResolveRequest(BaseModel):
+    """Re-checks an already-built record without any new speech.
+
+    Used when the record was changed directly rather than produced by a
+    fresh transcription — a manual correction to a field mid-conversation,
+    or a newly-recorded item merged into one the seller already confirmed —
+    and needs the same completeness/currency/catalogue checks as any other
+    path before the client can trust its status.
+    """
+
+    transcript: str
+    record: dict
+    attempts: int = 0
+    default_method: Optional[str] = None
+    catalog_names: list[str] = []
 
 
 @router.post("/sale", status_code=status.HTTP_200_OK)
@@ -164,6 +182,30 @@ async def answer_followup_audio(
         asked_index,
         asked_field,
         asked_question,
+    )
+
+
+@router.post("/resolve", status_code=status.HTTP_200_OK)
+async def resolve_sale(
+    payload: ResolveRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Re-checks an already-built record — no ASR, no extraction.
+
+    Two callers on the frontend need this: a direct correction to a field
+    mid-conversation (the quick-edit pencil), and merging a freshly-recorded
+    item into a record the seller already has (adding another item). Both
+    hand back a record that was changed without going through transcription,
+    and need the same completeness/currency/catalogue checks as any other
+    path before the client can trust the returned status.
+    """
+    return await _run(
+        voice_pipeline.resolve,
+        payload.transcript,
+        payload.record,
+        payload.attempts,
+        payload.default_method,
+        payload.catalog_names,
     )
 
 

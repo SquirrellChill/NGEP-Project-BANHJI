@@ -66,20 +66,39 @@ def extract_node(state: SaleState) -> dict:
     return {"record": record, "attempts": 0}
 
 
-def apply_answer_node(state: SaleState) -> dict:
-    attempts = int(state.get("attempts", 0)) + 1
-    record = state.get("record") or extractor.empty_record()
+# def apply_answer_node(state: SaleState) -> dict:
+#     attempts = int(state.get("attempts", 0)) + 1
+#     record = state.get("record") or extractor.empty_record()
 
-    value = extractor.extract_field_answer(
-        state["asked_field"], state.get("asked_question", ""), state["answer_text"]
+#     value = extractor.extract_field_answer(
+#         state["asked_field"], state.get("asked_question", ""), state["answer_text"]
+#     )
+#     updated = followup.apply_answer(
+#         record, int(state["asked_index"]), state["asked_field"], value
+#     )
+
+#     combined = f'{state.get("transcript", "").strip()} {state["answer_text"].strip()}'.strip()
+#     return {"record": updated, "attempts": attempts, "transcript": combined}
+def apply_answer_node(state: SaleState) -> dict:
+    record = state.get("record") or extractor.empty_record()
+    before = len(followup.missing_slots(record))
+
+    updates = extractor.extract_followup_updates(
+        record, state.get("asked_question", ""), state["answer_text"]
     )
-    updated = followup.apply_answer(
-        record, int(state["asked_index"]), state["asked_field"], value
-    )
+    updated = followup.apply_updates(record, updates)
+
+    after = len(followup.missing_slots(updated))
+    made_progress = after < before
+
+    # Reset the stall counter on any real progress; only climb it when a
+    # turn produced nothing usable. This is what lets a 100-item sale take
+    # as many turns as it genuinely needs, while still bailing out of a
+    # seller stuck answering something wrong repeatedly.
+    attempts = 0 if made_progress else int(state.get("attempts", 0)) + 1
 
     combined = f'{state.get("transcript", "").strip()} {state["answer_text"].strip()}'.strip()
     return {"record": updated, "attempts": attempts, "transcript": combined}
-
 
 def infer_currency_node(state: SaleState) -> dict:
     record, notes = extractor.infer_currency(

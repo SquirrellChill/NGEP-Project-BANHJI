@@ -176,12 +176,17 @@ def get_client():
     return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
-def generation_config():
-    """Shared generation settings for every Gemini call."""
+# def generation_config():
+#     """Shared generation settings for every Gemini call."""
+#     from google.genai import types
+
+#     return types.GenerateContentConfig(temperature=settings.TEMPERATURE)
+def generation_config(max_output_tokens: int = 8192):
     from google.genai import types
-
-    return types.GenerateContentConfig(temperature=settings.TEMPERATURE)
-
+    return types.GenerateContentConfig(
+        temperature=settings.TEMPERATURE,
+        max_output_tokens=max_output_tokens,
+    )
 
 def call_with_retry(fn, *, what: str):
     """Run a Gemini call with bounded exponential backoff.
