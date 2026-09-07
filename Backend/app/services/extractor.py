@@ -32,6 +32,7 @@ from app.services import prompts
 
 _FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 _NUMBER = re.compile(r"-?\d+(?:[.,]\d+)?")
+_BARE_NUMBER = re.compile(r"^\s*-?\d+(?:[.,]\d+)?\s*$")
 
 # Khmer numerals ០-៩, so a transcript that already used digits doesn't need a
 # model call to become an int.
@@ -74,7 +75,7 @@ def extract(transcript: str) -> dict:
         return client.models.generate_content(
             model=settings.EXTRACTION_MODEL,
             contents=prompt,
-            config=generation_config(),
+            config=generation_config(max_output_tokens=8192),
         )
 
     response = call_with_retry(call, what="Extraction")
@@ -86,6 +87,17 @@ def extract_field_answer(field: str, question: str, answer: str):
 
     Fast paths first — digits for numbers, keyword match for currency. Only
     spoken number words and free-text product names reach the model.
+
+    The number fast-path only fires when the answer IS a bare number (e.g.
+    "5", "0.50"), not merely CONTAINS one -- a free-form sentence like
+    "it costs 0.50 cents" answering a quantity question would otherwise get
+    its price figure misread as the quantity (0.50 truncated to 0 for an
+    int field), silently corrupting a slot the loop believed it had just
+    filled correctly, with no further question ever asked about it again.
+
+    Kept alongside extract_followup_updates (below) rather than removed --
+    still used anywhere a caller wants a single targeted field parsed
+    without the free-form multi-field pass.
     """
     answer = (answer or "").strip()
     if not answer:
@@ -95,7 +107,7 @@ def extract_field_answer(field: str, question: str, answer: str):
         direct = _to_currency(answer)
         if direct is not None:
             return direct
-    elif field in ("quantity", "price"):
+    elif field in ("quantity", "price") and _BARE_NUMBER.match(answer):
         direct = _to_number(answer, as_int=(field == "quantity"))
         if direct is not None:
             return direct
@@ -122,6 +134,94 @@ def extract_field_answer(field: str, question: str, answer: str):
     if field == "currency":
         return _to_currency(value)
     return _clean_text(value)
+
+
+def extract_followup_updates(record: dict, question: str, answer: str) -> list:
+    """Pull every fillable/correctable field out of a free-form answer.
+
+    Unlike extract_field_answer, this isn't limited to the single field that
+    was asked -- the seller might answer several gaps, or correct something
+    already filled, in one sentence (e.g. "1 cow milk, 2500 riel, cash").
+
+    Returns a list of {"index": int, "field": str, "value": ...} dicts,
+    already coerced to the right type per field and validated against the
+    record's actual item indexes.
+    """
+    answer = (answer or "").strip()
+    if not answer:
+        return []
+
+    client = get_client()
+    prompt = prompts.FOLLOWUP_FREEFORM_PROMPT.format(
+        question=question,
+        record_json=json.dumps(_context_for_followup(record), ensure_ascii=False),
+        answer=answer,
+    )
+
+    def call():
+        return client.models.generate_content(
+            model=settings.EXTRACTION_MODEL,
+            contents=prompt,
+            config=generation_config(),
+        )
+
+    response = call_with_retry(call, what="Follow-up parsing")
+    parsed = parse_json(getattr(response, "text", "") or "")
+    raw_updates = parsed.get("updates")
+    if not isinstance(raw_updates, list):
+        return []
+
+    items = record.get("items") or []
+    cleaned = []
+    for update in raw_updates:
+        if not isinstance(update, dict):
+            continue
+        index = update.get("index")
+        field = update.get("field")
+        value = update.get("value")
+        if not isinstance(index, int) or not (0 <= index < len(items)):
+            continue
+        if field not in LINE_FIELDS:
+            continue
+
+        if field == "quantity":
+            value = _to_number(value, as_int=True)
+        elif field == "price":
+            value = _to_number(value, as_int=False)
+        elif field == "currency":
+            value = _to_currency(value)
+        else:
+            value = _clean_text(value)
+
+        if value is not None:
+            cleaned.append({"index": index, "field": field, "value": value})
+
+    return cleaned
+
+
+def _context_for_followup(record: dict) -> dict:
+    """Trim a large record before sending it to the followup-parsing model.
+
+    Only items with a missing required field need full detail -- those are
+    what a follow-up answer is actually filling. Complete items are reduced
+    to just their name and index, so per-turn token cost stays roughly flat
+    whether the sale has 5 items or 100.
+    """
+    from app.services import followup
+
+    incomplete_indexes = {i for i, _ in followup.missing_slots(record)}
+    items = []
+    for index, line in enumerate(record.get("items") or []):
+        if index in incomplete_indexes:
+            items.append({"index": index, **line})
+        else:
+            items.append({"index": index, "item": line.get("item")})
+
+    return {
+        "items": items,
+        "date": record.get("date"),
+        "payment_method": record.get("payment_method"),
+    }
 
 
 def empty_line() -> dict:

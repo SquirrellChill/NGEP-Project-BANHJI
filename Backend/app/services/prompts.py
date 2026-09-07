@@ -220,11 +220,19 @@ They answered: {answer}
 
 Return ONLY a JSON object: {{"value": ...}}
 
-- The value is for the field "{field}".
+- The value is for the field "{field}" ONLY. If the answer mentions numbers
+  or details for OTHER fields too (e.g. a quantity or unit count alongside a
+  price), ignore those and return only the value for "{field}".
 - quantity and price: digits only, convert spoken numbers.
 - currency: exactly "KHR" or "USD".
 - item: keep the spoken language and script, never translate.
-- If the answer doesn't actually contain the value, return null.
+- If the answer doesn't actually contain the value for "{field}", return null.
+
+Example: field is "price", answer is "១គោ ២៥០០រៀល" (1 cow, 2500 riel)
+-> {{"value": 2500}}
+
+Example: field is "quantity", answer is "១គោ ២៥០០រៀល" (1 cow, 2500 riel)
+-> {{"value": 1}}
 
 JSON only."""
 
@@ -249,3 +257,46 @@ FOLLOWUP_QUESTIONS_UNNAMED = {
     "price": "តើអីវ៉ាន់ទី {position} តម្លៃប៉ុន្មាន?",
     "currency": "តើអីវ៉ាន់ទី {position} គិតជា រៀល ឬ ដុល្លារ?",
 }
+
+# Add this to Backend/app/services/prompts.py, alongside the other
+# follow-up-related prompts (near FIELD_ANSWER_PROMPT).
+#
+# Required by extractor.extract_followup_updates(), which calls:
+#   FOLLOWUP_FREEFORM_PROMPT.format(question=question, record_json=..., answer=answer)
+# and expects the response JSON to have an "updates" list of
+# {"index": int, "field": str, "value": ...} objects.
+
+FOLLOWUP_FREEFORM_PROMPT = """A seller was asked a follow-up question about their sale.
+They may answer just that question, answer several gaps at once, or correct
+something already recorded -- pull out every fillable or correctable value
+you can find, not only the one field that was asked about.
+
+Current record (only incomplete items show all fields; complete items are
+trimmed to just their name, to keep this short):
+{record_json}
+
+They were asked: {question}
+They answered: {answer}
+
+For each value you can confidently attribute to a specific item and field,
+return an entry. Only use "index" values that exist in the record above --
+never invent a new item or a new index.
+
+Valid fields: item, quantity, unit, price, currency, price_basis.
+
+Rules:
+- quantity: digits only, convert spoken numbers.
+- price: digits only. Never convert between currencies, never split a lump
+  total across items.
+- currency: exactly "KHR" or "USD".
+- item: keep the spoken language and script, never translate.
+- If the answer corrects a field that already has a value (e.g. the item
+  name was misheard), include that correction too -- do not skip it just
+  because a value is already present.
+- If nothing in the answer can be confidently attributed, return an empty list.
+- Never guess a value that wasn't actually stated.
+
+Return ONLY a JSON object shaped exactly like this:
+{{"updates": [{{"index": 0, "field": "price", "value": 2500}}]}}
+
+No markdown fences, no explanation. JSON only."""
