@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
@@ -45,28 +46,35 @@ def register(
                 detail="An account with this email already exists.",
             )
 
-        code, hashed_code, expires_at = generate_verification_code()
-
         existing_user.first_name = payload.first_name
         existing_user.last_name = payload.last_name
         existing_user.phone_number = payload.phone_number
         existing_user.password_hash = hash_password(payload.password)
-        existing_user.email_verification_code = hashed_code
-        existing_user.email_verification_expires = expires_at
         existing_user.email_verification_attempts = 0
         existing_user.email_verification_locked_until = None
+
+        if settings.REQUIRE_EMAIL_VERIFICATION:
+            code, hashed_code, expires_at = generate_verification_code()
+            existing_user.email_verification_code = hashed_code
+            existing_user.email_verification_expires = expires_at
+            user_repo.save_user(db, existing_user)
+
+            background_tasks.add_task(
+                send_verification_email, existing_user.email, code, existing_user.first_name
+            )
+
+            return {
+                "success": True,
+                "message": "Account already exists but is unverified. A new verification code has been sent to your email.",
+                "data": {"requires_email_verification": True},
+            }
+
         user_repo.save_user(db, existing_user)
-
-        background_tasks.add_task(
-            send_verification_email, existing_user.email, code, existing_user.first_name
-        )
-
         return {
             "success": True,
-            "message": "Account already exists but is unverified. A new verification code has been sent to your email.",
+            "message": "Account updated. You can sign in now.",
+            "data": {"requires_email_verification": False},
         }
-
-    code, hashed_code, expires_at = generate_verification_code()
 
     user = user_repo.create_user(
         db,
@@ -76,15 +84,25 @@ def register(
         email=payload.email,
         password_hash=hash_password(payload.password),
     )
-    user.email_verification_code = hashed_code
-    user.email_verification_expires = expires_at
-    user_repo.save_user(db, user)
 
-    background_tasks.add_task(send_verification_email, user.email, code, user.first_name)
+    if settings.REQUIRE_EMAIL_VERIFICATION:
+        code, hashed_code, expires_at = generate_verification_code()
+        user.email_verification_code = hashed_code
+        user.email_verification_expires = expires_at
+        user_repo.save_user(db, user)
+
+        background_tasks.add_task(send_verification_email, user.email, code, user.first_name)
+
+        return {
+            "success": True,
+            "message": "Registration successful. Please check your email for your verification code.",
+            "data": {"requires_email_verification": True},
+        }
 
     return {
         "success": True,
-        "message": "Registration successful. Please check your email for your verification code.",
+        "message": "Registration successful. You can sign in now.",
+        "data": {"requires_email_verification": False},
     }
 
 
@@ -151,6 +169,9 @@ def resend_verification(
         "message": "If the account exists and is not verified, a verification code has been sent.",
     }
 
+    if not settings.REQUIRE_EMAIL_VERIFICATION:
+        return generic_response
+
     if not user or user.is_verified:
         return generic_response
 
@@ -186,7 +207,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    if not user.is_verified:
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_verified:
         raise HTTPException(
             status_code=403, detail="Please verify your email before logging in."
         )

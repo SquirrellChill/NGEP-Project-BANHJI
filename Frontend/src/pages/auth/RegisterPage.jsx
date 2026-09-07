@@ -74,8 +74,13 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(formData);
-      navigate('/verify-email', { state: { email: formData.email } });
+      const response = await register(formData);
+      const requiresEmailVerification = response.data?.data?.requires_email_verification !== false;
+      if (requiresEmailVerification) {
+        navigate('/verify-email', { state: { email: formData.email } });
+      } else {
+        navigate('/login', { state: { registered: true, email: formData.email } });
+      }
     } catch (err) {
       const message = getErrorMessage(err);
       const backendFieldErrors = fieldErrorsFromBackend(message);

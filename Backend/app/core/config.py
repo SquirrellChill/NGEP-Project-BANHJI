@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
+    REQUIRE_EMAIL_VERIFICATION: bool = True
 
     # SMTP. Leave MAIL_SERVER blank to print emails to the console instead.
     # These were previously declared twice, and the second set had no
