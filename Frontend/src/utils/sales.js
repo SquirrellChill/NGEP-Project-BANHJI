@@ -5,6 +5,28 @@ export const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const localeForLanguage = (language) => (language === 'km' ? 'km-KH' : 'en-US');
+
+export const formatDisplayDate = (value, language = 'en') => {
+  const parsed = value instanceof Date ? value : new Date(value || Date.now());
+  const date = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  return new Intl.DateTimeFormat(localeForLanguage(language), {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+};
+
+export const formatDisplayDateRange = (startDate, endDate, language = 'en') => {
+  if (!startDate || startDate === endDate) return formatDisplayDate(startDate, language);
+  return `${formatDisplayDate(startDate, language)} - ${formatDisplayDate(endDate, language)}`;
+};
+
+export const weekdayLabels = (language = 'en') => {
+  const formatter = new Intl.DateTimeFormat(localeForLanguage(language), { weekday: 'short' });
+  return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2026, 1, index + 1)));
+};
+
 export const addDays = (date, days) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);

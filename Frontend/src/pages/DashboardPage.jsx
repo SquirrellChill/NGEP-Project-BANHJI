@@ -15,7 +15,7 @@ import './DashboardPage.css';
 const profileFallback = {
   name: 'Seller',
   firstName: 'Seller',
-  businessName: 'BANHJI',
+  businessName: '',
   role: 'Owner',
   email: '',
   phone: '',
@@ -42,6 +42,25 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState(emptySummary);
   const [transactions, setTransactions] = useState([]);
   const [error, setError] = useState('');
+
+  const startManualSale = () => {
+    navigate('/dashboard/transactions', {
+      state: {
+        saleDraft: {
+          sale_date: new Date().toISOString().slice(0, 10),
+          items: [{
+            id: `manual-${Date.now()}`,
+            description: '',
+            product: '',
+            quantity: 1,
+            unit_price: 0,
+            currency: 'KHR',
+            price_basis: 'unit',
+          }],
+        },
+      },
+    });
+  };
 
   useEffect(() => {
     let alive = true;
@@ -90,7 +109,7 @@ export default function DashboardPage() {
       </section>
       {error && <p className="review-error-message">{error}</p>}
       <RevenueCard summary={summary} />
-      <QuickActionCard onClick={() => navigate('/dashboard/voice')} />
+      <QuickActionCard onVoice={() => navigate('/dashboard/voice')} onManual={startManualSale} />
       <RecentTransactions transactions={transactions} />
     </MobileAppShell>
   );

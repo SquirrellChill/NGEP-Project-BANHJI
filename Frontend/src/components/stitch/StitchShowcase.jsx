@@ -1,4 +1,4 @@
-import { ArrowUpRight, Mic, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, AudioLines, TrendingUp } from 'lucide-react';
 import Waveform from '../dashboard/Waveform';
 
 export default function StitchShowcase() {
@@ -14,7 +14,7 @@ export default function StitchShowcase() {
       </div>
       <div className="showcase-voice-card">
         <span>
-          <Mic size={24} />
+          <AudioLines size={24} />
         </span>
         <div>
           <strong>Voice-to-sales</strong>

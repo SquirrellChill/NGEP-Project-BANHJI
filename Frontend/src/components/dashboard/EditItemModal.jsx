@@ -1,28 +1,36 @@
 import { Edit, Minus, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { formatKHR, formatUSD, usdToKhr } from '../../utils/currency';
+import { formatCurrencyPair, setPreferredCurrency, usdToKhr } from '../../utils/currency';
 
 export default function EditItemModal({ item, onClose, onDelete, onSave }) {
   const { t } = useLanguage();
   const [productName, setProductName] = useState(item?.product || '');
   const [quantity, setQuantity] = useState(item?.quantity || 1);
   const [currency, setCurrency] = useState(item?.currency || (item?.unitPriceKHR ? 'KHR' : 'USD'));
-  const [unitPrice, setUnitPrice] = useState(item?.unit_price || item?.unitPriceKHR || item?.unitPriceUSD || 1);
+  const [unitPrice, setUnitPrice] = useState(item?.unit_price ?? item?.unitPriceKHR ?? item?.unitPriceUSD ?? 0);
   const exchangeRate = 4104;
 
   useEffect(() => {
     setProductName(item?.product || '');
     setQuantity(item?.quantity || 1);
     setCurrency(item?.currency || (item?.unitPriceKHR ? 'KHR' : 'USD'));
-    setUnitPrice(item?.unit_price || item?.unitPriceKHR || item?.unitPriceUSD || 1);
+    setUnitPrice(item?.unit_price ?? item?.unitPriceKHR ?? item?.unitPriceUSD ?? 0);
   }, [item]);
 
   if (!item) return null;
 
   const totalKHR = currency === 'KHR' ? quantity * unitPrice : usdToKhr(quantity * unitPrice, exchangeRate);
   const totalUSD = currency === 'USD' ? quantity * unitPrice : totalKHR / exchangeRate;
+  const displayTotals = formatCurrencyPair({ khr: totalKHR, usd: totalUSD, preferredCurrency: currency });
+
+  const chooseCurrency = (nextCurrency) => {
+    setCurrency(nextCurrency);
+    setPreferredCurrency(nextCurrency);
+  };
+
   const handleSave = () => {
+    setPreferredCurrency(currency);
     onSave({
       ...item,
       product: productName.trim(),
@@ -60,10 +68,10 @@ export default function EditItemModal({ item, onClose, onDelete, onSave }) {
             </div>
           </label>
           <label className="dash-field">
-            <span>Currency</span>
-            <div className="currency-toggle">
-              <button className={currency === 'KHR' ? 'active' : ''} type="button" onClick={() => setCurrency('KHR')}>៛ KHR</button>
-              <button className={currency === 'USD' ? 'active' : ''} type="button" onClick={() => setCurrency('USD')}>$ USD</button>
+            <span>{t('currency')}</span>
+            <div className="currency-toggle" aria-label={t('currency')}>
+              <button className={currency === 'KHR' ? 'active' : ''} type="button" onClick={() => chooseCurrency('KHR')}>KHR</button>
+              <button className={currency === 'USD' ? 'active' : ''} type="button" onClick={() => chooseCurrency('USD')}>USD</button>
             </div>
           </label>
         </div>
@@ -75,10 +83,10 @@ export default function EditItemModal({ item, onClose, onDelete, onSave }) {
           </div>
         </label>
         <section className="price-calculation-card">
-          <small>{t('total')} <span>(Auto Calculated)</span></small>
-          <strong>{formatKHR(totalKHR)}</strong>
-          <span>{formatUSD(totalUSD)}</span>
-          <em>Exchange rate: 1 USD = {exchangeRate.toLocaleString('en-US')} KHR</em>
+          <small>{t('total')} <span>({t('autoCalculated')})</span></small>
+          <strong>{displayTotals.primary}</strong>
+          <span>{displayTotals.equivalent}</span>
+          <em>{t('exchangeRate', { rate: exchangeRate.toLocaleString('en-US') })}</em>
         </section>
         <section className="screen-actions two-col">
           <button className="danger-action" type="button" onClick={() => onDelete(item.id)}>

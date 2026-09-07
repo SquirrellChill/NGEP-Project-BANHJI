@@ -176,6 +176,27 @@
   border-color: #bfdbfe;
 }
 
+.field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.stitch-submit-button {
+  background: #7c3aed;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.24);
+}
+
+.field-label-row a,
+.stitch-auth-footer a,
+.stitch-legal-note a {
+  color: #7c3aed;
+}
+
+html[data-theme='dark'] .stitch-submit-button {
+  background: #8b5cf6;
+}
+
 .stitch-auth-footer {
   color: #64748b;
   text-align: center;
@@ -224,7 +245,7 @@ html[data-theme='dark'] .stitch-field input {
 
 html[data-theme='dark'] .stitch-field input:focus {
   background: #111827;
-  border-color: #4f9cff;
+  border-color: #a78bfa;
 }
 
 html[data-theme='dark'] .stitch-status.error {
@@ -241,9 +262,9 @@ html[data-theme='dark'] .stitch-status.success {
 
 html[data-theme='dark'] .stitch-status.info,
 html[data-theme='dark'] .stitch-status:not(.error):not(.success) {
-  background: #132b4d;
-  color: #bfdbfe;
-  border-color: #1d4ed8;
+  background: #22143d;
+  color: #ddd6fe;
+  border-color: #4c1d95;
 }
 
 @media (min-width: 1025px) {

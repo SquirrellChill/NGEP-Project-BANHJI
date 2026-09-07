@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import EditItemModal from '../../components/dashboard/EditItemModal';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import ReviewSalePanel from '../../components/dashboard/ReviewSalePanel';
@@ -8,9 +8,10 @@ import ScreenHeader from '../../components/dashboard/ScreenHeader';
 import TransactionSavedView from '../../components/dashboard/TransactionSavedView';
 import { useLanguage } from '../../context/LanguageContext';
 import { createSale, deleteSale, getSale, getSales, updateSale } from '../../services/transactionService';
-import { formatKHR, formatUSD } from '../../utils/currency';
+import { formatCurrencyPair, formatCurrencyValue, getPreferredCurrency } from '../../utils/currency';
 import {
   firstDefined,
+  formatDisplayDate,
   normalizeReviewItem,
   normalizeSaleFromApi,
   resolveCurrency,
@@ -38,15 +39,22 @@ const getErrorMessage = (error) => {
 };
 
 const formatSaleTotal = (sale) => {
-  const parts = [];
-  if (Number(sale.totalKHR || 0) > 0) parts.push(formatKHR(sale.totalKHR));
-  if (Number(sale.totalUSD || 0) > 0) parts.push(formatUSD(sale.totalUSD));
-  return parts.join(' / ') || formatKHR(0);
+  const totals = formatCurrencyPair({ khr: sale.totalKHR, usd: sale.totalUSD });
+  return totals.equivalent && totals.equivalent !== '$0.00' && totals.equivalent !== '0 KHR'
+    ? `${totals.primary} (${totals.equivalent})`
+    : totals.primary;
 };
+
+const hasMissingDetails = (items) =>
+  items.some((item) => {
+    const description = String(firstDefined(item.description, item.product, item.item, '')).trim();
+    return !description || Number(item.quantity || 0) <= 0 || resolveUnitPrice(item) <= 0;
+  });
 
 export default function TransactionsScreen() {
   const location = useLocation();
-  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const draft = useMemo(() => resolveDraft(location.state), [location.state]);
   const [editingItem, setEditingItem] = useState(null);
   const [saleItems, setSaleItems] = useState(() => resolveDraftItems(draft));
@@ -101,6 +109,10 @@ export default function TransactionsScreen() {
     const payload = buildSalePayload();
     if (!payload.items.length) {
       setError(t('addOneItem'));
+      return;
+    }
+    if (hasMissingDetails(activeItems)) {
+      setError(t('missingSaleDetails'));
       return;
     }
 
@@ -181,7 +193,7 @@ export default function TransactionsScreen() {
             setSaleItems([]);
             setDeletedIds([]);
           } else {
-            window.history.back();
+            navigate('/dashboard');
           }
         }} />
         <ReviewSalePanel
@@ -208,7 +220,7 @@ export default function TransactionsScreen() {
         if (selectedSale) {
           setSelectedSale(null);
         } else {
-          window.history.back();
+          navigate('/dashboard');
         }
       }} />
       {error && <p className="review-error-message">{error}</p>}
@@ -227,7 +239,7 @@ export default function TransactionsScreen() {
             <button className="transaction-row-button" key={sale.saleId} type="button" onClick={() => handleSelectSale(sale.saleId)}>
               <span>
                 <strong>{summarizeSaleTitle(sale)}</strong>
-                <small>{sale.date} · {t('transactions')}</small>
+                <small>{formatDisplayDate(sale.date, language)} · {t('saleSource')}</small>
               </span>
               <span className="transaction-amount">{formatSaleTotal(sale)}</span>
             </button>
@@ -239,13 +251,19 @@ export default function TransactionsScreen() {
 }
 
 function TransactionDetail({ sale, isBusy, onEdit, onDelete }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const totals = formatCurrencyPair({
+    khr: sale.totalKHR,
+    usd: sale.totalUSD,
+    preferredCurrency: getPreferredCurrency(),
+  });
+
   return (
     <>
       <section className="sale-total-section">
-        <div><strong>{t('date')}</strong><span>{resolveSaleDate(sale.date)}</span></div>
-        <div><strong>{t('totalKHR')}</strong><span>{formatKHR(sale.totalKHR)}</span></div>
-        <div><strong>{t('totalUSD')}</strong><span>{formatUSD(sale.totalUSD)}</span></div>
+        <div><strong>{t('date')}</strong><span>{formatDisplayDate(resolveSaleDate(sale.date), language)}</span></div>
+        <div><strong>{t('primaryAmount')}</strong><span>{totals.primary}</span></div>
+        <div><strong>{t('equivalentAmount')}</strong><span>{totals.equivalent}</span></div>
       </section>
       <section className="review-items-card">
         <div className="review-grid review-head">
@@ -262,8 +280,8 @@ function TransactionDetail({ sale, isBusy, onEdit, onDelete }) {
             <div className="review-grid review-row static-row" key={item.id}>
               <span>{item.product}</span>
               <span>{item.quantity}</span>
-              <span>{currency === 'KHR' ? formatKHR(unitPrice) : formatUSD(unitPrice)}</span>
-              <span>{currency === 'KHR' ? formatKHR(total) : formatUSD(total)}</span>
+              <span>{formatCurrencyValue(unitPrice, currency)}</span>
+              <span>{formatCurrencyValue(total, currency)}</span>
             </div>
           );
         })}

@@ -1,9 +1,9 @@
 import { X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { formatLocalDate } from '../../utils/sales';
+import { formatLocalDate, weekdayLabels } from '../../utils/sales';
 
 export default function DatePickerModal({ selectedDate = new Date(), onSelect, onClose }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const selected = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
   const current = Number.isNaN(selected.getTime()) ? new Date() : selected;
   const year = current.getFullYear();
@@ -28,10 +28,10 @@ export default function DatePickerModal({ selectedDate = new Date(), onSelect, o
           onChange={(event) => onSelect(new Date(`${event.target.value}T00:00:00`))}
         />
         <div className="calendar-month">
-          {current.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+          {current.toLocaleString(language === 'km' ? 'km-KH' : 'en-US', { month: 'long', year: 'numeric' })}
         </div>
         <div className="calendar-grid">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+          {weekdayLabels(language).map((day, index) => (
             <span className="calendar-weekday" key={`${day}-${index}`}>{day}</span>
           ))}
           {Array.from({ length: firstDay }, (_, index) => (
@@ -42,7 +42,7 @@ export default function DatePickerModal({ selectedDate = new Date(), onSelect, o
             const selectedClass = formatLocalDate(date) === formatLocalDate(current) ? 'selected' : '';
             return (
               <button className={selectedClass} type="button" key={day} onClick={() => onSelect(date)}>
-                {day}
+                {day.toLocaleString(language === 'km' ? 'km-KH' : 'en-US')}
               </button>
             );
           })}

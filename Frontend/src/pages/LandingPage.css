@@ -779,6 +779,59 @@
   margin-top: 18px;
 }
 
+.language-nav-toggle {
+  min-height: 38px;
+  min-width: 48px;
+  border: 1px solid #ddd6fe;
+  border-radius: 13px;
+  background: #f5f3ff;
+  color: #6d28d9;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.stitch-brand-mark,
+.stitch-primary-small,
+.stitch-primary-action,
+.hero-primary,
+.nav-primary,
+.footer-cta button,
+.feature-tabs button.active {
+  background: #7c3aed;
+  color: white;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.24);
+}
+
+.stitch-hero h1,
+.hero-section h1,
+.metric-card strong,
+.stitch-legal-title h1,
+.stitch-auth-hero h1 {
+  color: #4c1d95;
+}
+
+.hero-section h1 span,
+.section-heading-center span,
+.stitch-eyebrow,
+.hero-badge,
+.stitch-public-header a,
+.nav-links a,
+.nav-link-button {
+  color: #6d28d9;
+}
+
+.stitch-eyebrow,
+.hero-badge,
+.feature-tabs button,
+.showcase-voice-card,
+.stitch-feature-card > span {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #6d28d9;
+}
+
 html[data-theme='dark'] .stitch-public-page,
 html[data-theme='dark'] .stitch-auth-page,
 html[data-theme='dark'] .stitch-legal-page,
@@ -870,6 +923,38 @@ html[data-theme='dark'] .feature-tabs button {
 html[data-theme='dark'] .feature-tabs button.active {
   background: #1677ff;
   color: white;
+}
+
+html[data-theme='dark'] .stitch-brand-mark,
+html[data-theme='dark'] .stitch-primary-small,
+html[data-theme='dark'] .stitch-primary-action,
+html[data-theme='dark'] .hero-primary,
+html[data-theme='dark'] .nav-primary,
+html[data-theme='dark'] .footer-cta button,
+html[data-theme='dark'] .feature-tabs button.active {
+  background: #8b5cf6;
+  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.28);
+}
+
+html[data-theme='dark'] .language-nav-toggle {
+  background: #22143d;
+  border-color: #4c1d95;
+  color: #ddd6fe;
+}
+
+html[data-theme='dark'] .hero-section h1,
+html[data-theme='dark'] .metric-card strong,
+html[data-theme='dark'] .stitch-hero h1 {
+  color: #c4b5fd;
+}
+
+html[data-theme='dark'] .hero-section h1 span,
+html[data-theme='dark'] .section-heading-center span,
+html[data-theme='dark'] .hero-badge,
+html[data-theme='dark'] .stitch-eyebrow,
+html[data-theme='dark'] .nav-links a,
+html[data-theme='dark'] .nav-link-button {
+  color: #ddd6fe;
 }
 
 @media (max-width: 820px) {

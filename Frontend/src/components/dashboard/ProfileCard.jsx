@@ -6,14 +6,16 @@ import UserAvatar from './UserAvatar';
 export default function ProfileCard({ profile }) {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const meta = [profile.role, profile.businessName].filter(Boolean).join(' · ');
 
   return (
     <section className="profile-card">
       <UserAvatar size="lg" />
       <div className="profile-card-copy">
         <h2>{profile.name}</h2>
-        <p>{profile.role} · {profile.businessName}</p>
-        <p>{profile.email}</p>
+        {meta && <p>{meta}</p>}
+        {profile.email && <p>{profile.email}</p>}
+        {profile.phone && <p>{profile.phone}</p>}
       </div>
       <button type="button" onClick={() => navigate('/dashboard/profile/edit')}>
         <Edit size={14} />

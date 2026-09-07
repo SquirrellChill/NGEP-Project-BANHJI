@@ -1,17 +1,19 @@
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
-import { formatKHR, formatUSD } from '../../utils/currency';
+import { formatCurrencyPair } from '../../utils/currency';
+import { formatDisplayDate } from '../../utils/sales';
+
+const formatTotal = (transaction) => {
+  const totals = formatCurrencyPair({ khr: transaction.amountKHR, usd: transaction.amountUSD });
+  return totals.equivalent && totals.equivalent !== '$0.00' && totals.equivalent !== '0 KHR'
+    ? `${totals.primary} (${totals.equivalent})`
+    : totals.primary;
+};
 
 export default function RecentTransactions({ transactions }) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
-  const formatTotal = (transaction) => {
-    const parts = [];
-    if (Number(transaction.amountKHR || 0) > 0) parts.push(formatKHR(transaction.amountKHR));
-    if (Number(transaction.amountUSD || 0) > 0) parts.push(formatUSD(transaction.amountUSD));
-    return parts.join(' / ') || formatKHR(0);
-  };
+  const { language, t } = useLanguage();
 
   return (
     <section>
@@ -27,7 +29,7 @@ export default function RecentTransactions({ transactions }) {
           <button className="transaction-row-button" key={transaction.id} type="button" onClick={() => navigate('/dashboard/transactions')}>
             <span>
               <strong>{transaction.title}</strong>
-              <small>{transaction.time} · {transaction.source}</small>
+              <small>{formatDisplayDate(transaction.time, language)} · {t('saleSource')}</small>
             </span>
             <span className="transaction-amount">
               {formatTotal(transaction)}

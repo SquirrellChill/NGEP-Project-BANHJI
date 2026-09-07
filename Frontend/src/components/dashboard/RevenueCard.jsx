@@ -1,12 +1,17 @@
 import { Calendar, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { formatKHR, formatUSD } from '../../utils/currency';
+import { formatCurrencyPair } from '../../utils/currency';
+import { formatDisplayDate, formatDisplayDateRange } from '../../utils/sales';
 
 export default function RevenueCard({ summary, variant = 'home' }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const label = variant === 'history' ? summary.filteredLabel : summary.label;
   const amountKHR = summary.amountKHR || 0;
   const amountUSD = summary.amountUSD || 0;
+  const totals = formatCurrencyPair({ khr: amountKHR, usd: amountUSD });
+  const displayDate = summary.endDate
+    ? formatDisplayDateRange(summary.date, summary.endDate, language)
+    : formatDisplayDate(summary.date, language);
 
   return (
     <section className="revenue-summary-card">
@@ -18,18 +23,18 @@ export default function RevenueCard({ summary, variant = 'home' }) {
         {variant === 'home' && (
           <div className="date-pill">
             <Calendar size={14} />
-            <span>{summary.date}</span>
+            <span>{displayDate}</span>
           </div>
         )}
       </div>
       <div className="revenue-main-row">
-        <strong>{formatKHR(amountKHR)}</strong>
-        <span>({formatUSD(amountUSD)})</span>
+        <strong>{totals.primary}</strong>
+        <span>({totals.equivalent})</span>
       </div>
       {variant === 'home' && (
         <>
           <p className="revenue-equivalent">
-            {t('usdTotal')} <b>{formatUSD(amountUSD)}</b> <span>{t('khrSeparate')}</span>
+            {t('equivalentAmount')} <b>{totals.equivalent}</b>
           </p>
           <div className="revenue-divider" />
           <div className="revenue-orders">
@@ -41,7 +46,7 @@ export default function RevenueCard({ summary, variant = 'home' }) {
       {variant === 'history' && (
         <div className="history-date-inline">
           <button type="button" aria-label="Previous date">‹</button>
-          <span>{summary.date}</span>
+          <span>{displayDate}</span>
           <button type="button" aria-label="Next date">›</button>
         </div>
       )}

@@ -8,8 +8,6 @@ export default function ProfileForm({ profile, onSubmit, saving = false, status 
     lastName: profile.lastName || '',
     phoneNumber: profile.phone || '',
     email: profile.email || '',
-    businessName: profile.businessName || '',
-    address: profile.address || '',
   });
 
   useEffect(() => {
@@ -18,8 +16,6 @@ export default function ProfileForm({ profile, onSubmit, saving = false, status 
       lastName: profile.lastName || '',
       phoneNumber: profile.phone || '',
       email: profile.email || '',
-      businessName: profile.businessName || '',
-      address: profile.address || '',
     });
   }, [profile]);
 
@@ -44,20 +40,12 @@ export default function ProfileForm({ profile, onSubmit, saving = false, status 
         <input name="lastName" value={form.lastName} onChange={handleChange} required />
       </label>
       <label className="dash-field">
-        <span>{t('businessName')}</span>
-        <input name="businessName" value={form.businessName} onChange={handleChange} />
-      </label>
-      <label className="dash-field">
         <span>{t('phoneNumber')}</span>
         <input name="phoneNumber" value={form.phoneNumber} onChange={handleChange} required />
       </label>
       <label className="dash-field">
         <span>{t('emailAddress')}</span>
         <input type="email" name="email" value={form.email} onChange={handleChange} />
-      </label>
-      <label className="dash-field">
-        <span>{t('address')}</span>
-        <textarea name="address" value={form.address} onChange={handleChange} rows={3} />
       </label>
       <section className="screen-actions two-col">
         <button className="outline-action" type="reset" disabled={saving}>{t('cancel')}</button>

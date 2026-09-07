@@ -1,4 +1,4 @@
-import { ChevronUp, Mic, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
+import { AudioLines, ChevronUp, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import Waveform from './Waveform';
 
@@ -31,7 +31,7 @@ export default function VoiceAssistantPanel({
         {error && <p className="review-error-message">{error}</p>}
         <button className="voice-start-button" type="button" onClick={onStart}>
           <span>{t('tapMic')}</span>
-          <b><Mic size={20} fill="currentColor" /></b>
+          <b><AudioLines size={20} /></b>
         </button>
       </section>
     );
@@ -41,7 +41,7 @@ export default function VoiceAssistantPanel({
     <section className="voice-active-screen">
       <div className="recording-indicator">
         <div className={`recording-orb ${isRecording ? 'active' : ''}`}>
-          <Mic size={42} />
+          <AudioLines size={42} />
         </div>
         <h2>{title}</h2>
         <p>{subtitle}</p>

@@ -1,7 +1,17 @@
-// Voice extraction is now served by Backend's /voice routes.
+// Voice extraction is served by Backend's authenticated /voice routes.
 
-import { aiApi } from './api';
+import { nodeApi } from './api';
 
-export const extractFromSpeech = () => {
-  throw new Error('Not implemented — use the Backend /voice/sale endpoint.');
+export const transcribeSaleAudio = ({ audioBlob, mimeType }) => {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, `sale-recording.${mimeType?.includes('mp4') ? 'mp4' : 'webm'}`);
+  if (mimeType) formData.append('mime_type', mimeType);
+
+  return nodeApi.post('/voice/sale', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 };
+
+export const answerSaleFollowup = (payload) => nodeApi.post('/voice/followup', payload);
+
+export const extractFromSpeech = transcribeSaleAudio;

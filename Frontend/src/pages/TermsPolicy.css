@@ -106,6 +106,16 @@
   color: #358e1e;
 }
 
+.stitch-legal-icon {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #7c3aed;
+}
+
+.stitch-legal-title h1 {
+  color: #4c1d95;
+}
+
 html[data-theme='dark'] .stitch-legal-title h1,
 html[data-theme='dark'] .legal-section h2 {
   color: #f8fafc;
@@ -124,9 +134,9 @@ html[data-theme='dark'] .stitch-legal-card {
 }
 
 html[data-theme='dark'] .stitch-legal-icon {
-  background: #132b4d;
-  border-color: #1d4ed8;
-  color: #93c5fd;
+  background: #22143d;
+  border-color: #4c1d95;
+  color: #c4b5fd;
 }
 
 html[data-theme='dark'] .legal-callout.warning {

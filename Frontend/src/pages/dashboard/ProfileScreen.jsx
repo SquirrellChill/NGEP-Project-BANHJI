@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { buildDashboardProfile } from '../../utils/profile';
 import '../DashboardPage.css';
+import { useNavigate } from 'react-router-dom';
 
 const profileFallback = {
   name: 'Seller',
   firstName: 'Seller',
-  businessName: 'BANHJI',
+  businessName: '',
   role: 'Owner',
   email: '',
   phone: '',
@@ -18,13 +19,14 @@ const profileFallback = {
 };
 
 export default function ProfileScreen() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const profile = buildDashboardProfile(user, profileFallback);
 
   return (
     <MobileAppShell activeTab="profile" showBottomNav={false}>
-      <ScreenHeader title={t('profile')} onBack={() => window.history.back()} />
+      <ScreenHeader title={t('profile')} onBack={() => navigate('/dashboard')} />
       <ProfileCard profile={profile} />
       <h2 className="account-heading">{t('account')}</h2>
       <SettingsList />

@@ -1,5 +1,6 @@
 import { Tag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DatePickerModal from '../../components/dashboard/DatePickerModal';
 import HistoryFilters from '../../components/dashboard/HistoryFilters';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
@@ -31,6 +32,7 @@ const totalForCurrency = (summary, currency) =>
   Number((summary?.totals || []).find((entry) => entry.currency === currency)?.total || 0);
 
 export default function HistoryScreen() {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState('today');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -59,7 +61,8 @@ export default function HistoryScreen() {
           ...emptySummary,
           label: t('filteredRevenue'),
           filteredLabel: t('filteredRevenue'),
-          date: range.startDate === range.endDate ? range.startDate : `${range.startDate} to ${range.endDate}`,
+          date: range.startDate,
+          endDate: range.endDate,
           amountKHR: totalForCurrency(summaryData, 'KHR'),
           amountUSD: totalForCurrency(summaryData, 'USD'),
           totalOrders: summaryData.sales_count,
@@ -88,7 +91,7 @@ export default function HistoryScreen() {
 
   return (
     <MobileAppShell activeTab="history">
-      <ScreenHeader title={t('history')} onBack={() => window.history.back()} />
+      <ScreenHeader title={t('history')} onBack={() => navigate('/dashboard')} />
       {error && <p className="review-error-message">{error}</p>}
       <RevenueCard summary={summary} variant="history" />
       <HistoryFilters activeFilter={activeFilter} onChange={handleFilterChange} onPickDate={() => setShowDatePicker(true)} />

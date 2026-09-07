@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import ProfileForm from '../../components/dashboard/ProfileForm';
 import ScreenHeader from '../../components/dashboard/ScreenHeader';
@@ -12,7 +13,7 @@ import '../DashboardPage.css';
 const profileFallback = {
   name: 'Seller',
   firstName: 'Seller',
-  businessName: 'BANHJI',
+  businessName: '',
   role: 'Owner',
   email: '',
   phone: '',
@@ -22,6 +23,7 @@ const profileFallback = {
 const getErrorMessage = (error) => error?.response?.data?.detail || 'Unable to update profile.';
 
 export default function EditProfileScreen() {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { t } = useLanguage();
   const profile = buildDashboardProfile(user, profileFallback);
@@ -44,7 +46,7 @@ export default function EditProfileScreen() {
 
   return (
     <MobileAppShell showBottomNav={false}>
-      <ScreenHeader title={t('profile')} onBack={() => window.history.back()} />
+      <ScreenHeader title={t('profile')} onBack={() => navigate('/dashboard/profile')} />
       <div className="profile-edit-avatar">
         <UserAvatar size="xl" />
       </div>

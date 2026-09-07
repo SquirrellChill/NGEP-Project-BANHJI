@@ -42,5 +42,11 @@ export const forgotPassword = ({ email }) =>
 export const resetPassword = ({ token, password }) =>
   nodeApi.post('/auth/reset-password', { token, password });
 
-export const getErrorMessage = (error) =>
-  error?.response?.data?.detail || 'Something went wrong. Please try again.';
+export const getErrorMessage = (error) => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((entry) => entry?.msg || entry?.message).filter(Boolean).join(' ');
+  }
+  return error?.message || 'Something went wrong. Please try again.';
+};

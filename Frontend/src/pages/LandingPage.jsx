@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, BarChart3, CheckCircle2, ChevronDown, Cloud, LayoutDashboard, LogIn, Mic, Minus, Plus, Zap } from 'lucide-react';
+import { ArrowRight, AudioLines, BarChart3, CheckCircle2, ChevronDown, Cloud, LayoutDashboard, LogIn, Minus, Plus, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import StitchBrand from '../components/stitch/StitchBrand';
 import StitchShowcase from '../components/stitch/StitchShowcase';
@@ -8,7 +8,7 @@ import { useLanguage } from '../context/LanguageContext';
 import './LandingPage.css';
 
 const featureTabs = [
-  { id: 'voice', icon: Mic, titleKey: 'voiceEngine', textKey: 'voiceEngineCopy' },
+  { id: 'voice', icon: AudioLines, titleKey: 'voiceEngine', textKey: 'voiceEngineCopy' },
   { id: 'analytics', icon: BarChart3, titleKey: 'analyticsTitle', textKey: 'analyticsPaneCopy' },
   { id: 'cloud', icon: Cloud, titleKey: 'cloudTitle', textKey: 'cloudPaneCopy' },
 ];
@@ -22,7 +22,7 @@ const faqItems = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { language, toggleLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState('voice');
   const [openFaq, setOpenFaq] = useState(0);
   const hasStoredSession = Boolean(localStorage.getItem('kc_token') || localStorage.getItem('kc_user'));
@@ -49,6 +49,9 @@ export default function LandingPage() {
             <Link to="/privacy">{t('privacy')}</Link>
           </div>
           <div className="nav-actions">
+            <button className="language-nav-toggle" type="button" onClick={toggleLanguage} aria-label={t('language')}>
+              {language === 'en' ? t('languageShortKhmer') : t('languageShortEnglish')}
+            </button>
             {isLoggedIn ? (
               <>
                 <button className="nav-link-button" type="button" onClick={handleLogout}>{t('logout')}</button>
@@ -158,7 +161,7 @@ export default function LandingPage() {
         </section>
 
         <section className="footer-cta">
-          <h2>KotChomnol</h2>
+          <h2>KOTCHOMNOL</h2>
           <p>{t('landingCopy')}</p>
           <button type="button" onClick={() => navigate(isLoggedIn ? '/dashboard/voice' : '/register')}>
             {isLoggedIn ? t('recordSale') : t('startFree')}

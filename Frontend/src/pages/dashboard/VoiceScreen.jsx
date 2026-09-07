@@ -174,7 +174,7 @@ export default function VoiceScreen() {
 
   return (
     <MobileAppShell activeTab="voice" showBottomNav={false} className="voice-page-bg">
-      <ScreenHeader title={t('saleRecording')} onBack={() => window.history.back()} />
+      <ScreenHeader title={t('saleRecording')} onBack={() => navigate('/dashboard')} />
       <VoiceAssistantPanel
         mode={mode}
         transcript={transcript}

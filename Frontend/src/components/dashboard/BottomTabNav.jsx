@@ -1,4 +1,4 @@
-import { ClipboardList, History, Home, Mic, User } from 'lucide-react';
+import { AudioLines, ClipboardList, History, Home, User } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -18,7 +18,7 @@ export default function BottomTabNav({ activeTab }) {
       </NavLink>
       <div className="tab-nav-center">
         <button className="bottom-mic-button" type="button" onClick={() => navigate('/dashboard/voice')} aria-label={t('recordSale')}>
-          <Mic size={25} />
+          <AudioLines size={25} />
         </button>
       </div>
       <NavLink className={`tab-nav-item ${activeTab === 'transactions' ? 'active' : ''}`} to="/dashboard/transactions">
