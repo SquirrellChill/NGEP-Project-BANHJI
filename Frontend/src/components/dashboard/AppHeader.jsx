@@ -1,7 +1,12 @@
-import { Bell } from 'lucide-react';
+import { Globe2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import UserAvatar from './UserAvatar';
 
 export default function AppHeader({ profile }) {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+
   return (
     <header className="app-profile-header">
       <div className="app-profile-left">
@@ -11,9 +16,15 @@ export default function AppHeader({ profile }) {
           <p>{profile.businessName}</p>
         </div>
       </div>
-      <button className="notification-button" type="button" aria-label="Notifications">
-        <Bell size={24} strokeWidth={1.8} />
-        <span aria-hidden="true" />
+      <button
+        className="public-home-button"
+        type="button"
+        onClick={() => navigate('/')}
+        title={t('publicHomepageHint')}
+        aria-label={t('backToWebsite')}
+      >
+        <Globe2 size={17} />
+        <span>{t('backToWebsite')}</span>
       </button>
     </header>
   );

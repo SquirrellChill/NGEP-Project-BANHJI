@@ -8,8 +8,9 @@ import RevenueCard from '../components/dashboard/RevenueCard';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getSales, getSummary } from '../services/transactionService';
+import { APPLICATION_EXCHANGE_RATE } from '../utils/currency';
 import { buildDashboardProfile } from '../utils/profile';
-import { normalizeSaleFromApi, summarizeSaleTitle } from '../utils/sales';
+import { formatLocalDate, normalizeSaleFromApi, summarizeSaleTitle } from '../utils/sales';
 import './DashboardPage.css';
 
 const profileFallback = {
@@ -28,6 +29,7 @@ const emptySummary = {
   date: '',
   amountKHR: 0,
   amountUSD: 0,
+  exchangeRate: APPLICATION_EXCHANGE_RATE,
   totalOrders: 0,
 };
 
@@ -44,19 +46,12 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   const startManualSale = () => {
-    navigate('/dashboard/transactions', {
+    navigate('/dashboard/voice', {
       state: {
+        entryMode: 'manual',
         saleDraft: {
           sale_date: new Date().toISOString().slice(0, 10),
-          items: [{
-            id: `manual-${Date.now()}`,
-            description: '',
-            product: '',
-            quantity: 1,
-            unit_price: 0,
-            currency: 'KHR',
-            price_basis: 'unit',
-          }],
+          items: [],
         },
       },
     });
@@ -64,9 +59,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let alive = true;
+    const today = formatLocalDate(new Date());
 
     Promise.all([
-      getSummary({ period: 'daily' }),
+      getSummary({ period: 'daily', anchor: today }),
       getSales({ limit: 5 }),
     ])
       .then(([summaryResponse, salesResponse]) => {
@@ -77,9 +73,10 @@ export default function DashboardPage() {
           ...emptySummary,
           label: t('todaysRevenue'),
           filteredLabel: t('filteredRevenue'),
-          date: summaryData.start_date,
+          date: today,
           amountKHR: totalForCurrency(summaryData, 'KHR'),
           amountUSD: totalForCurrency(summaryData, 'USD'),
+          exchangeRate: APPLICATION_EXCHANGE_RATE,
           totalOrders: summaryData.sales_count,
         });
         setTransactions(normalizedSales.map((sale) => ({
@@ -89,7 +86,9 @@ export default function DashboardPage() {
           source: 'sale',
           amountKHR: sale.totalKHR,
           amountUSD: sale.totalUSD,
+          exchangeRate: APPLICATION_EXCHANGE_RATE,
         })));
+        setError('');
       })
       .catch(() => {
         if (alive) setError(t('unableDashboard'));
@@ -109,7 +108,7 @@ export default function DashboardPage() {
       </section>
       {error && <p className="review-error-message">{error}</p>}
       <RevenueCard summary={summary} />
-      <QuickActionCard onVoice={() => navigate('/dashboard/voice')} onManual={startManualSale} />
+      <QuickActionCard onVoice={() => navigate('/dashboard/voice', { state: { entryMode: 'voice' } })} onManual={startManualSale} />
       <RecentTransactions transactions={transactions} />
     </MobileAppShell>
   );

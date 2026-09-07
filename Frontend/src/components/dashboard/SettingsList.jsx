@@ -1,4 +1,4 @@
-import { ChevronRight, Languages, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
+import { ChevronRight, Globe2, Languages, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -35,6 +35,11 @@ export default function SettingsList() {
       <button type="button" onClick={() => navigate('/dashboard/profile/change-password')}>
         <SettingIcon><Lock size={21} /></SettingIcon>
         <span><strong>{t('changePassword')}</strong><small>{t('choosePassword')}</small></span>
+        <ChevronRight size={21} />
+      </button>
+      <button type="button" onClick={() => navigate('/')}>
+        <SettingIcon><Globe2 size={21} /></SettingIcon>
+        <span><strong>{t('backToWebsite')}</strong><small>{t('publicHomepageHint')}</small></span>
         <ChevronRight size={21} />
       </button>
       <button type="button" onClick={handleLogout}>

@@ -1,34 +1,26 @@
-import { AudioLines, ClipboardList, History, Home, User } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { ClipboardList, History, Home, PlusCircle, User } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function BottomTabNav({ activeTab }) {
-  const navigate = useNavigate();
   const { t } = useLanguage();
 
   return (
-    <nav className="bottom-tab-nav" aria-label="Dashboard navigation">
-      <NavLink className={`tab-nav-item ${activeTab === 'home' ? 'active' : ''}`} to="/dashboard">
-        <Home size={24} fill="currentColor" />
-        <span>{t('home')}</span>
-      </NavLink>
-      <NavLink className={`tab-nav-item ${activeTab === 'history' ? 'active' : ''}`} to="/dashboard/history">
-        <History size={24} />
-        <span>{t('history')}</span>
-      </NavLink>
-      <div className="tab-nav-center">
-        <button className="bottom-mic-button" type="button" onClick={() => navigate('/dashboard/voice')} aria-label={t('recordSale')}>
-          <AudioLines size={25} />
-        </button>
-      </div>
-      <NavLink className={`tab-nav-item ${activeTab === 'transactions' ? 'active' : ''}`} to="/dashboard/transactions">
-        <ClipboardList size={24} />
-        <span>{t('transactions')}</span>
-      </NavLink>
-      <NavLink className={`tab-nav-item ${activeTab === 'profile' ? 'active' : ''}`} to="/dashboard/profile">
-        <User size={24} />
-        <span>{t('profile')}</span>
-      </NavLink>
+    <nav className="bottom-tab-nav" aria-label={t('dashboardNavigation')}>
+      <NavItem active={activeTab === 'home'} to="/dashboard" icon={<Home size={22} />} label={t('dashboard')} />
+      <NavItem active={activeTab === 'history'} to="/dashboard/history" icon={<History size={22} />} label={t('history')} />
+      <NavItem active={activeTab === 'add'} to="/dashboard/voice" icon={<PlusCircle size={24} />} label={t('addSale')} featured />
+      <NavItem active={activeTab === 'transactions'} to="/dashboard/transactions" icon={<ClipboardList size={22} />} label={t('transactions')} />
+      <NavItem active={activeTab === 'profile'} to="/dashboard/profile" icon={<User size={22} />} label={t('profile')} />
     </nav>
+  );
+}
+
+function NavItem({ active, to, icon, label, featured = false }) {
+  return (
+    <NavLink className={`tab-nav-item ${featured ? 'featured' : ''} ${active ? 'active' : ''}`} to={to}>
+      {icon}
+      <span>{label}</span>
+    </NavLink>
   );
 }

@@ -1,14 +1,13 @@
 import { Check, Pencil, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { formatCurrencyPair, formatCurrencyValue, getPreferredCurrency } from '../../utils/currency';
+import { formatCurrencyTotals, formatCurrencyValue } from '../../utils/currency';
 
 const getUnitPrice = (item) => Number(item.unit_price ?? item.unitPrice ?? item.unitPriceKHR ?? item.unitPriceUSD ?? item.price ?? 0);
 const getCurrency = (item) => item.currency || (item.unitPriceKHR !== undefined || item.totalKHR !== undefined ? 'KHR' : 'USD');
 
-export default function ReviewSalePanel({ items, onEdit, onConfirm, deletedIds = [], error = '', isSaving = false }) {
+export default function ReviewSalePanel({ items, onEdit, onConfirm, deletedIds = [], error = '', isSaving = false, exchangeRate = null }) {
   const { t } = useLanguage();
   const visibleItems = items.filter((item) => !deletedIds.includes(item.id));
-  const preferredCurrency = visibleItems[0]?.currency || getPreferredCurrency();
   const totals = visibleItems.reduce(
     (sum, item) => {
       const currency = getCurrency(item);
@@ -17,11 +16,7 @@ export default function ReviewSalePanel({ items, onEdit, onConfirm, deletedIds =
     },
     { KHR: 0, USD: 0 }
   );
-  const totalLabel = formatCurrencyPair({
-    khr: totals.KHR,
-    usd: totals.USD,
-    preferredCurrency,
-  });
+  const totalLabel = formatCurrencyTotals({ khr: totals.KHR, usd: totals.USD, exchangeRate });
 
   return (
     <div className="review-sale-panel">
@@ -56,8 +51,8 @@ export default function ReviewSalePanel({ items, onEdit, onConfirm, deletedIds =
       </section>
       <section className="sale-total-section">
         <div><strong>{t('totalItems')}:</strong><span>{visibleItems.length}</span></div>
-        <div><strong>{t('totalAmount')}</strong><span>{totalLabel.primary}</span></div>
-        <div><strong>{t('equivalentAmount')}</strong><span>{totalLabel.equivalent}</span></div>
+        <div><strong>{t('totalUsdLabel')}</strong><span>{totalLabel.usdLabel}</span></div>
+        <div><strong>{t('totalKhrLabel')}</strong><span>{totalLabel.khrLabel}</span></div>
       </section>
       {error && <p className="review-error-message">{error}</p>}
       <section className="screen-actions two-col">

@@ -9,6 +9,7 @@ export function buildDashboardProfile(user, fallback) {
     ...fallback,
     name,
     firstName,
+    lastName,
     email: user.email || fallback.email,
     phone: user.phoneNumber || user.phone_number || user.phone || fallback.phone,
     businessName: user.businessName || user.business_name || user.shopName || fallback.businessName,

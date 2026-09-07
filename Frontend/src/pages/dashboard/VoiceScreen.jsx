@@ -1,61 +1,36 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AudioLines, Check, Edit3, Keyboard, Pause, Play, Plus, RotateCcw, Send, Square } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import EditItemModal from '../../components/dashboard/EditItemModal';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import ScreenHeader from '../../components/dashboard/ScreenHeader';
-import VoiceAssistantPanel from '../../components/dashboard/VoiceAssistantPanel';
-import ReviewSalePanel from '../../components/dashboard/ReviewSalePanel';
-import EditItemModal from '../../components/dashboard/EditItemModal';
 import TransactionSavedView from '../../components/dashboard/TransactionSavedView';
+import Waveform from '../../components/dashboard/Waveform';
 import { useLanguage } from '../../context/LanguageContext';
+import { createSale } from '../../services/transactionService';
 import {
   answerSaleFollowup,
   answerSaleFollowupAudio,
   resolveSaleRecord,
-  saveSaleRecord,
   transcribeSaleAudio,
 } from '../../services/aiService';
+import { formatCurrencyTotals, formatCurrencyValue, getPreferredCurrency, setPreferredCurrency } from '../../utils/currency';
+import { normalizeReviewItem, resolveCurrency, resolveSaleDate, resolveUnitPrice, saleToPayload } from '../../utils/sales';
 import '../DashboardPage.css';
+
+const DRAFT_KEY = 'kc_add_sale_draft';
+const emptyManualItem = { description: '', quantity: '1', unit_price: '', currency: getPreferredCurrency() };
 
 const extractErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
   if (typeof detail === 'string') return detail;
   if (Array.isArray(detail)) {
-    // FastAPI/Pydantic validation error shape: [{type, loc, msg, input}, ...]
-    // Include `loc` (the exact field path, e.g. ["body","items",0,"price"])
-    // alongside `msg` -- "Field required" alone doesn't say WHICH field,
-    // which is exactly the information needed to fix a payload mismatch.
-    return detail
-      .map((d) => {
-        if (!d || typeof d !== 'object') return JSON.stringify(d);
-        const path = Array.isArray(d.loc) ? d.loc.join('.') : '';
-        return path ? `${path}: ${d.msg}` : d.msg || JSON.stringify(d);
-      })
-      .join('; ');
+    return detail.map((entry) => {
+      const path = Array.isArray(entry?.loc) ? entry.loc.join('.') : '';
+      return path ? `${path}: ${entry.msg}` : entry?.msg;
+    }).filter(Boolean).join('; ');
   }
-  if (detail && typeof detail === 'object') return JSON.stringify(detail);
-  return fallback;
-};
-
-// The AI pipeline returns relative terms ("today", "yesterday") or null,
-// not an actual date -- but /transactions requires a real date string
-// (confirmed: "body.sale_date: Input should be a valid date"). Resolves
-// to YYYY-MM-DD in the browser's local time.
-const resolveSaleDate = (relativeDate) => {
-  const now = new Date();
-  const normalized = (relativeDate || '').trim().toLowerCase();
-
-  if (normalized === 'yesterday') {
-    now.setDate(now.getDate() - 1);
-  } else if (normalized && normalized !== 'today') {
-    // Already looks like a specific date the model extracted -- try it
-    // directly rather than assuming "today".
-    const parsed = new Date(normalized);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split('T')[0];
-    }
-  }
-
-  return now.toISOString().split('T')[0];
+  return err?.message || fallback;
 };
 
 const formatElapsed = (seconds) => {
@@ -64,105 +39,150 @@ const formatElapsed = (seconds) => {
   return `${minutes}:${secs}`;
 };
 
-// Converts the backend's record shape ({item, quantity, price, currency})
-// into the shape ReviewSalePanel/EditItemModal already expect elsewhere in
-// this app ({id, product, quantity, unit_price, currency}). These
-// components are shared with the manual-entry transaction flow -- reusing
-// them (instead of a second, custom summary UI) keeps the review/edit/save
-// experience identical regardless of whether the sale came in by voice or
-// by hand, and avoids re-implementing currency formatting/conversion that
-// utils/currency.js already handles correctly.
-const toReviewItems = (items) =>
-  (items || []).map((item, index) => ({
-    id: `voice-item-${index}`,
-    product: item.item || '',
-    quantity: item.quantity ?? 1,
-    currency: item.currency || 'USD',
-    unit_price: item.price ?? 0,
-  }));
+const normalizeNumberInput = (value, { integer = false } = {}) => {
+  const cleaned = String(value ?? '').replace(/[^\d.]/g, '');
+  const [wholeRaw, ...rest] = cleaned.split('.');
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '') || (cleaned.startsWith('0') ? '0' : '');
+  if (!rest.length || integer) return whole;
+  return `${whole || '0'}.${rest.join('')}`;
+};
 
-// The reverse conversion, for sending the (possibly user-edited) items back
-// through the AI pipeline's record shape when needed, and for the final save.
-const toBackendItems = (reviewItems) =>
-  reviewItems.map((item) => ({
-    item: item.product,
-    quantity: Number(item.quantity),
-    unit: null,
-    price: Number(item.unit_price),
-    currency: item.currency,
-    price_basis: 'unit',
-  }));
+const parsePositiveNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
+};
+
+const voiceItemToDraftItem = (item, index) => normalizeReviewItem({
+  id: `voice-${Date.now()}-${index}`,
+  description: item.description || item.product || item.item || '',
+  quantity: item.quantity ?? 1,
+  unit_price: item.unit_price ?? item.price ?? 0,
+  currency: item.currency || 'KHR',
+  price_basis: item.price_basis || 'unit',
+}, index);
+
 
 export default function VoiceScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
-  const [mode, setMode] = useState('standby');
+  const [inputMode, setInputMode] = useState(location.state?.entryMode || 'manual');
+  const [saleDate, setSaleDate] = useState(() => resolveSaleDate(location.state?.saleDraft?.sale_date));
+  const [draftItems, setDraftItems] = useState(() => {
+    const incoming = location.state?.saleDraft?.items;
+    if (Array.isArray(incoming) && incoming.length) return incoming.map(normalizeReviewItem);
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+      return Array.isArray(stored?.items) ? stored.items.map(normalizeReviewItem) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [manualItem, setManualItem] = useState(emptyManualItem);
+  const [manualErrors, setManualErrors] = useState({});
+  const [editingItem, setEditingItem] = useState(null);
+  const [viewMode, setViewMode] = useState('entry');
+  const [saving, setSaving] = useState(false);
+  const [savedSaleId, setSavedSaleId] = useState(null);
+  const [savedSale, setSavedSale] = useState(null);
+  const [error, setError] = useState('');
+
+  const [recordingMode, setRecordingMode] = useState('idle');
+  const [recordingPurpose, setRecordingPurpose] = useState('sale');
   const [audioBlob, setAudioBlob] = useState(null);
   const [mimeType, setMimeType] = useState('');
-  const [transcript, setTranscript] = useState('');
-  const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [transcript, setTranscript] = useState('');
   const [voiceResult, setVoiceResult] = useState(null);
   const [answerText, setAnswerText] = useState('');
   const [isAnswering, setIsAnswering] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [recordingPurpose, setRecordingPurpose] = useState('sale');
   const [history, setHistory] = useState([]);
-  const [chatActive, setChatActive] = useState(false);
-
-  // Review-step state, in the shape ReviewSalePanel/EditItemModal expect --
-  // separate from voiceResult.record, which stays in the AI pipeline's own
-  // shape until the moment we hand off to these shared components.
-  const [reviewItems, setReviewItems] = useState([]);
-  const [deletedIds, setDeletedIds] = useState([]);
-  const [editingItem, setEditingItem] = useState(null);
-
-  // Quick-edit during the clarification loop -- lets the seller correct
-  // ANY field of the item currently being asked about (not just the one
-  // field the current question targets), e.g. fixing a misheard item name
-  // while the bot is asking about price. Separate from EditItemModal,
-  // which only applies once the record is already complete.
-  const [showQuickEdit, setShowQuickEdit] = useState(false);
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
-  const previousTranscriptRef = useRef('');
+  const voiceItemIdsRef = useRef([]);
 
   useEffect(() => {
-    if (mode !== 'listening') return undefined;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ sale_date: saleDate, items: draftItems }));
+  }, [saleDate, draftItems]);
+
+
+  useEffect(() => {
+    if (recordingMode !== 'recording') return undefined;
     const timer = window.setInterval(() => setElapsed((current) => current + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [mode]);
+  }, [recordingMode]);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
-  const resetRecordingPanel = () => {
+  const totals = useMemo(() => {
+    const original = draftItems.reduce((sum, item) => {
+      const currency = resolveCurrency(item);
+      sum[currency] += Number(item.quantity || 0) * resolveUnitPrice(item);
+      return sum;
+    }, { KHR: 0, USD: 0 });
+    return formatCurrencyTotals({ khr: original.KHR, usd: original.USD });
+  }, [draftItems]);
+
+  const validateManualItem = () => {
+    const next = {};
+    const quantity = parsePositiveNumber(manualItem.quantity);
+    const price = parsePositiveNumber(manualItem.unit_price);
+    if (!manualItem.description.trim()) next.description = t('fieldRequired');
+    if (!Number.isFinite(quantity) || quantity <= 0) next.quantity = t('quantityGreaterZero');
+    if (!Number.isFinite(price) || price < 0 || manualItem.unit_price === '') next.unit_price = t('validPriceRequired');
+    setManualErrors(next);
+    return { valid: !Object.keys(next).length, quantity, price };
+  };
+
+  const addManualItem = (event) => {
+    event.preventDefault();
+    const result = validateManualItem();
+    if (!result.valid) return;
+    const item = normalizeReviewItem({
+      id: `manual-${Date.now()}`,
+      description: manualItem.description.trim(),
+      product: manualItem.description.trim(),
+      quantity: result.quantity,
+      unit_price: result.price,
+      currency: manualItem.currency,
+      price_basis: 'unit',
+    });
+    setPreferredCurrency(manualItem.currency);
+    setDraftItems((current) => [...current, item]);
+    setManualItem({ ...emptyManualItem, currency: manualItem.currency });
+    setError('');
+  };
+
+  const updateManualField = (name, value) => {
+    const nextValue = name === 'quantity'
+      ? normalizeNumberInput(value, { integer: false })
+      : name === 'unit_price'
+        ? normalizeNumberInput(value)
+        : value;
+    setManualItem((current) => ({ ...current, [name]: nextValue }));
+    setManualErrors((current) => ({ ...current, [name]: '' }));
+  };
+
+  const resetRecording = () => {
     setAudioBlob(null);
-    setElapsed(0);
     setMimeType('');
+    setElapsed(0);
   };
 
   const appendHistory = (role, text) => {
-    if (!text) return;
-    setHistory((current) => [...current, { role, text }]);
+    if (text) setHistory((current) => [...current, { role, text }]);
   };
 
   const startRecording = async (purpose = 'sale') => {
+    setInputMode('voice');
     setError('');
-    if (purpose === 'sale') {
-      setTranscript('');
-      setVoiceResult(null);
-      setHistory([]);
-      setChatActive(false);
-      previousTranscriptRef.current = '';
-    }
     setAnswerText('');
     setRecordingPurpose(purpose);
-    resetRecordingPanel();
-
+    resetRecording();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const preferredType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
@@ -171,7 +191,6 @@ export default function VoiceScreen() {
       streamRef.current = stream;
       recorderRef.current = recorder;
       setMimeType(recorder.mimeType || preferredType || 'audio/webm');
-
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
@@ -181,24 +200,12 @@ export default function VoiceScreen() {
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       };
-
       recorder.start();
-      setMode('listening');
+      setRecordingMode('recording');
     } catch {
+      setRecordingMode('idle');
       setError(t('micRequired'));
-      setMode('standby');
     }
-  };
-
-  const cancelActiveRecording = () => {
-    const recorder = recorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.onstop = null;
-      recorder.stop();
-    }
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    resetRecordingPanel();
   };
 
   const pauseRecording = () => {
@@ -206,10 +213,10 @@ export default function VoiceScreen() {
     if (!recorder) return;
     if (recorder.state === 'recording') {
       recorder.pause();
-      setMode('paused');
+      setRecordingMode('paused');
     } else if (recorder.state === 'paused') {
       recorder.resume();
-      setMode('listening');
+      setRecordingMode('recording');
     }
   };
 
@@ -217,14 +224,43 @@ export default function VoiceScreen() {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
     recorder.stop();
-    setMode('captured');
+    setRecordingMode('captured');
   };
 
-  const restartRecording = async () => {
+  const restartRecording = () => {
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== 'inactive') recorder.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
-    await startRecording(recordingPurpose);
+    startRecording(recordingPurpose);
+  };
+
+  const mergeVoiceRecordIntoDraft = (record) => {
+    const nextVoiceItems = (record?.items || []).map(voiceItemToDraftItem);
+    voiceItemIdsRef.current = nextVoiceItems.map((item) => item.id);
+    setDraftItems((current) => [
+      ...current.filter((item) => !voiceItemIdsRef.current.includes(item.id) && !String(item.id).startsWith('voice-')),
+      ...nextVoiceItems,
+    ]);
+  };
+
+  const handleVoiceResult = (result) => {
+    setVoiceResult(result);
+    setTranscript(result.transcript || transcript);
+    resetRecording();
+    if (result.transcript) appendHistory('user', result.transcript);
+    if (result.status === 'needs_followup' && result.question) {
+      appendHistory('assistant', result.question);
+      setRecordingMode('clarification');
+      return;
+    }
+    if (result.record) {
+      mergeVoiceRecordIntoDraft(result.record);
+      setRecordingMode('idle');
+      setViewMode('entry');
+      return;
+    }
+    setRecordingMode('idle');
+    setError(t('noSaleExtracted'));
   };
 
   const sendRecording = async () => {
@@ -232,10 +268,8 @@ export default function VoiceScreen() {
       setError(t('recordBeforeSend'));
       return;
     }
-
-    setMode('transcribing');
+    setRecordingMode('processing');
     setError('');
-
     try {
       if (recordingPurpose === 'followup' && voiceResult) {
         const response = await answerSaleFollowupAudio({
@@ -249,386 +283,240 @@ export default function VoiceScreen() {
           asked_question: voiceResult.question || '',
         });
         handleVoiceResult(response.data);
-      } else if (recordingPurpose === 'continue' && voiceResult) {
-        await sendContinueRecording();
+      } else if (recordingPurpose === 'continue' && voiceResult?.record) {
+        const fresh = await transcribeSaleAudio({ audioBlob, mimeType });
+        const mergedRecord = {
+          ...voiceResult.record,
+          items: [...(voiceResult.record.items || []), ...(fresh.data.record?.items || [])],
+          date: voiceResult.record.date || fresh.data.record?.date,
+        };
+        const resolved = await resolveSaleRecord({
+          transcript: `${voiceResult.transcript || transcript} ${fresh.data.transcript || ''}`.trim(),
+          record: mergedRecord,
+          attempts: 0,
+          default_method: mergedRecord.payment_method,
+        });
+        handleVoiceResult(resolved.data);
       } else {
         const response = await transcribeSaleAudio({ audioBlob, mimeType });
         handleVoiceResult(response.data);
       }
     } catch (err) {
       setError(extractErrorMessage(err, t('unableTranscribe')));
-      setMode('captured');
+      setRecordingMode('captured');
     }
-  };
-
-  const sendContinueRecording = async () => {
-    const freshResponse = await transcribeSaleAudio({ audioBlob, mimeType });
-    const newData = freshResponse.data;
-
-    appendHistory('user', newData.transcript);
-
-    const priorRecord = voiceResult.record;
-    const mergedRecord = {
-      items: [...(priorRecord.items || []), ...(newData.record?.items || [])],
-      date: priorRecord.date || newData.record?.date || null,
-      payment_method: priorRecord.payment_method || newData.record?.payment_method || null,
-    };
-    const mergedTranscript = `${previousTranscriptRef.current} ${newData.transcript}`.trim();
-
-    const resolved = await resolveSaleRecord({
-      transcript: mergedTranscript,
-      record: mergedRecord,
-      attempts: 0,
-      default_method: mergedRecord.payment_method,
-    });
-
-    previousTranscriptRef.current = mergedTranscript;
-    handleContinueResolved(resolved.data);
-  };
-
-  // Hands off to the review screen -- converts the AI pipeline's record
-  // shape into what ReviewSalePanel/EditItemModal expect, and switches out
-  // of the chat UI entirely for this step (these are full panels elsewhere
-  // in the app, not chat bubbles -- keeping that consistent matters more
-  // than forcing every step into one visual style).
-  const enterReview = (record) => {
-    setReviewItems(toReviewItems(record.items));
-    setDeletedIds([]);
-    setMode('review');
-  };
-
-  const handleVoiceResult = (result) => {
-    const newTranscript = result.transcript || '';
-    const isFirstTurn = history.length === 0;
-    const userTurnText = isFirstTurn
-      ? newTranscript
-      : newTranscript.slice(previousTranscriptRef.current.length).trim() || newTranscript;
-
-    appendHistory('user', userTurnText);
-    previousTranscriptRef.current = newTranscript;
-
-    setVoiceResult(result);
-    setTranscript(newTranscript);
-    resetRecordingPanel();
-
-    if (result.status === 'needs_followup' && result.question) {
-      appendHistory('assistant', result.question);
-      setAnswerText('');
-      setChatActive(true);
-      setMode('clarification');
-      return;
-    }
-
-    setChatActive(false);
-
-    if (result.status === 'needs_confirmation' && result.record) {
-      enterReview(result.record);
-      return;
-    }
-
-    if (result.record) {
-      setError(t('manualReviewNeeded'));
-      navigate('/dashboard/transactions', {
-        state: {
-          record: result.record,
-          transcript: result.transcript,
-          voiceStatus: result.status,
-        },
-      });
-      return;
-    }
-
-    setError(t('noSaleExtracted'));
-    setMode('standby');
   };
 
   const submitFollowup = async (event) => {
     event.preventDefault();
-    if (!voiceResult || !answerText.trim()) return;
-
-    cancelActiveRecording();
+    if (!answerText.trim() || !voiceResult) return;
     setIsAnswering(true);
     setError('');
-    appendHistory('user', answerText);
-
+    appendHistory('user', answerText.trim());
     try {
       const response = await answerSaleFollowup({
         transcript: voiceResult.transcript || transcript,
         record: voiceResult.record,
-        answer_text: answerText,
+        answer_text: answerText.trim(),
         attempts: voiceResult.attempts || 0,
         asked_index: voiceResult.asked_index || 0,
         asked_field: voiceResult.asked_field || 'item',
         asked_question: voiceResult.question || '',
       });
-      previousTranscriptRef.current = response.data.transcript || previousTranscriptRef.current;
-      handleFollowupResult(response.data);
+      setAnswerText('');
+      handleVoiceResult(response.data);
     } catch (err) {
       setError(extractErrorMessage(err, t('unableTranscribe')));
-      setMode('clarification');
+      setRecordingMode('clarification');
     } finally {
       setIsAnswering(false);
     }
   };
 
-  const handleFollowupResult = (result) => {
-    setVoiceResult(result);
-    setTranscript(result.transcript || '');
-    resetRecordingPanel();
-
-    if (result.status === 'needs_followup' && result.question) {
-      appendHistory('assistant', result.question);
-      setAnswerText('');
-      setChatActive(true);
-      setMode('clarification');
-      return;
-    }
-
-    setChatActive(false);
-
-    if (result.status === 'needs_confirmation' && result.record) {
-      enterReview(result.record);
-      return;
-    }
-
-    if (result.record) {
-      setError(t('manualReviewNeeded'));
-      navigate('/dashboard/transactions', {
-        state: {
-          record: result.record,
-          transcript: result.transcript,
-          voiceStatus: result.status,
-        },
-      });
-      return;
-    }
-
-    setError(t('noSaleExtracted'));
-    setMode('standby');
-  };
-
-  const handleContinueResolved = (result) => {
-    setVoiceResult(result);
-    setTranscript(result.transcript || '');
-    resetRecordingPanel();
-
-    if (result.status === 'needs_followup' && result.question) {
-      appendHistory('assistant', result.question);
-      setAnswerText('');
-      setChatActive(true);
-      setMode('clarification');
-      return;
-    }
-
-    if (result.status === 'needs_confirmation' && result.record) {
-      enterReview(result.record);
-      return;
-    }
-
-    if (result.record) {
-      setError(t('manualReviewNeeded'));
-      navigate('/dashboard/transactions', {
-        state: {
-          record: result.record,
-          transcript: result.transcript,
-          voiceStatus: result.status,
-        },
-      });
-      return;
-    }
-
-    setError(t('noSaleExtracted'));
-    setChatActive(false);
-    setMode('standby');
-  };
-
-  const startFollowupRecording = () => startRecording('followup');
-  const continueRecording = () => startRecording('continue');
-
-  // Lets the seller stop the clarification loop on their own terms and go
-  // straight to review with whatever's been captured so far -- even if
-  // some fields are still blank. toReviewItems() already defaults a
-  // missing quantity/price to sensible placeholders (1 / 0), so those
-  // gaps show up as editable fields on the review screen via the real
-  // EditItemModal, rather than forcing every remaining question first.
-  const finishAndReview = () => {
+  const openQuickEdit = () => {
     if (!voiceResult?.record) return;
-    cancelActiveRecording();
-    setChatActive(false);
-    enterReview(voiceResult.record);
+    mergeVoiceRecordIntoDraft(voiceResult.record);
+    setRecordingMode('idle');
   };
-
-  // Applies a direct correction to the item currently being asked about,
-  // then re-validates the WHOLE record through /voice/resolve -- reusing
-  // the same completeness/currency logic as every other path, so a manual
-  // correction is treated exactly like a spoken one would be. This is what
-  // lets the seller fix the item name while the bot is still asking about
-  // price, instead of that correction being silently dropped because it
-  // didn't answer the specific question asked.
-  const applyQuickEdit = async (updatedFields) => {
-    if (!voiceResult?.record) return;
-
-    const itemIndex = voiceResult.asked_index ?? 0;
-    const items = voiceResult.record.items.map((item, index) =>
-      index === itemIndex ? { ...item, ...updatedFields } : item
-    );
-    const updatedRecord = { ...voiceResult.record, items };
-
-    const correctionSummary = Object.entries(updatedFields)
-      .filter(([, value]) => value !== null && value !== '')
-      .map(([field, value]) => `${field}: ${value}`)
-      .join(', ');
-    appendHistory('user', `✏️ ${correctionSummary}`);
-
-    cancelActiveRecording();
-    setIsAnswering(true);
-    setError('');
-
-    try {
-      const resolved = await resolveSaleRecord({
-        transcript: voiceResult.transcript || transcript,
-        record: updatedRecord,
-        attempts: voiceResult.attempts || 0,
-        default_method: updatedRecord.payment_method,
-      });
-      setShowQuickEdit(false);
-      handleFollowupResult(resolved.data);
-    } catch (err) {
-      setError(extractErrorMessage(err, t('unableTranscribe')));
-    } finally {
-      setIsAnswering(false);
-    }
-  };
-
-  // --- Review screen handlers (ReviewSalePanel / EditItemModal) ---
-
-  const openEditItem = (item) => setEditingItem(item);
-  const closeEditItem = () => setEditingItem(null);
 
   const saveEditedItem = (updatedItem) => {
-    setReviewItems((current) =>
-      current.map((item) => (item.id === updatedItem.id ? updatedItem : item))
-    );
+    setDraftItems((current) => current.map((item) => (item.id === updatedItem.id ? normalizeReviewItem(updatedItem) : item)));
     setEditingItem(null);
   };
 
-  const deleteEditedItem = (id) => {
-    setDeletedIds((current) => [...current, id]);
+  const deleteItem = (id) => {
+    setDraftItems((current) => current.filter((item) => item.id !== id));
     setEditingItem(null);
+  };
+
+  const validateDraft = () => {
+    if (!draftItems.length) return t('addOneItem');
+    const invalid = draftItems.some((item) => {
+      const quantity = Number(item.quantity);
+      const price = resolveUnitPrice(item);
+      return !String(item.description || item.product || '').trim() || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0;
+    });
+    return invalid ? t('missingSaleDetails') : '';
   };
 
   const confirmAndSave = async () => {
-    const finalItems = reviewItems.filter((item) => !deletedIds.includes(item.id));
-    if (!finalItems.length) {
-      setError(t('noSaleExtracted'));
+    if (saving) return;
+    const validationError = validateDraft();
+    if (validationError) {
+      setError(validationError);
       return;
     }
-
-    setIsSaving(true);
+    setSaving(true);
     setError('');
-
     try {
-      // Map straight from reviewItems (already in ReviewSalePanel/
-      // EditItemModal's own shape: product, unit_price) to the exact field
-      // names /transactions actually requires (description, unit_price) --
-      // confirmed from the real 422 validation errors. No need to round-
-      // trip through the AI pipeline's {item, price} shape for this call;
-      // reviewItems already holds whatever the seller last edited.
-      const backendItems = finalItems.map((item) => ({
-        description: item.product,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-        currency: item.currency,
-      }));
-
-      await saveSaleRecord({
-        sale_date: resolveSaleDate(voiceResult?.record?.date),
-        items: backendItems,
-        payment_method: voiceResult?.record?.payment_method || null,
-        transcript: voiceResult?.transcript || transcript,
-      });
-
-      setMode('saved');
+      const payload = saleToPayload(saleDate, draftItems);
+      const response = await createSale(payload);
+      setSavedSaleId(response.data?.sale_id || response.data?.saleId || null);
+      sessionStorage.removeItem(DRAFT_KEY);
+      setViewMode('saved');
     } catch (err) {
-      setError(extractErrorMessage(err, 'Could not save. Please try again.'));
+      setError(extractErrorMessage(err, t('couldNotSave')));
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const recordNextSale = () => {
-    setVoiceResult(null);
-    setTranscript('');
-    setReviewItems([]);
-    setDeletedIds([]);
-    setEditingItem(null);
-    startRecording('sale');
-  };
-
-  // --- Render ---
-
-  if (mode === 'saved') {
+  if (viewMode === 'saved') {
     return (
-      <MobileAppShell activeTab="voice" showBottomNav={false} className="voice-page-bg">
-        <ScreenHeader title={t('saleRecording')} onBack={() => window.history.back()} />
-        <TransactionSavedView onNewSale={recordNextSale} />
-      </MobileAppShell>
-    );
-  }
-
-  if (mode === 'review') {
-    return (
-      <MobileAppShell activeTab="voice" showBottomNav={false} className="voice-page-bg">
-        <ScreenHeader title={t('saleRecording')} onBack={() => window.history.back()} />
-        <ReviewSalePanel
-          items={reviewItems}
-          deletedIds={deletedIds}
-          onEdit={openEditItem}
-          onConfirm={confirmAndSave}
-          error={error}
-          isSaving={isSaving}
-        />
-        {editingItem && (
-          <EditItemModal
-            item={editingItem}
-            onClose={closeEditItem}
-            onSave={saveEditedItem}
-            onDelete={deleteEditedItem}
-          />
-        )}
+      <MobileAppShell activeTab="add" showBottomNav={false}>
+        <TransactionSavedView savedSaleId={savedSaleId} onNewSale={() => {
+          setDraftItems([]);
+          setVoiceResult(null);
+          setTranscript('');
+          setHistory([]);
+          setSavedSale(null);
+          setSavedSaleId(null);
+          setViewMode('entry');
+        }} />
       </MobileAppShell>
     );
   }
 
   return (
-    <MobileAppShell activeTab="voice" showBottomNav={false} className="voice-page-bg">
-      <ScreenHeader title={t('saleRecording')} onBack={() => navigate('/dashboard')} />
-      <VoiceAssistantPanel
-        mode={mode}
-        inFollowup={chatActive}
-        transcript={transcript}
-        error={error}
-        elapsed={formatElapsed(elapsed)}
-        onStart={() => startRecording('sale')}
-        onPause={pauseRecording}
-        onStop={stopRecording}
-        onRestart={restartRecording}
-        onSend={sendRecording}
-        onRecordAnswer={startFollowupRecording}
-        onContinueRecording={continueRecording}
-        onFinishAndReview={finishAndReview}
-        onOpenQuickEdit={() => setShowQuickEdit(true)}
-        onCloseQuickEdit={() => setShowQuickEdit(false)}
-        onApplyQuickEdit={applyQuickEdit}
-        showQuickEdit={showQuickEdit}
-        currentItem={voiceResult?.record?.items?.[voiceResult?.asked_index ?? 0] || null}
-        question={voiceResult?.question || ''}
-        history={history}
-        answerText={answerText}
-        onAnswerChange={setAnswerText}
-        onAnswerSubmit={submitFollowup}
-        isAnswering={isAnswering}
-      />
+    <MobileAppShell activeTab="add" className="voice-page-bg">
+      <ScreenHeader title={t('addSale')} onBack={() => navigate('/dashboard')} />
+      <section className="add-sale-workspace">
+        <div className="input-mode-tabs" role="tablist" aria-label={t('addSaleMethod')}>
+          <button className={inputMode === 'manual' ? 'active' : ''} type="button" onClick={() => setInputMode('manual')}>
+            <Keyboard size={18} />{t('manualEntry')}
+          </button>
+          <button className={inputMode === 'voice' ? 'active' : ''} type="button" onClick={() => setInputMode('voice')}>
+            <AudioLines size={18} />{t('recordSale')}
+          </button>
+        </div>
+
+        <label className="dash-field sale-date-field">
+          <span>{t('date')}</span>
+          <input type="date" value={saleDate} onChange={(event) => setSaleDate(event.target.value)} />
+        </label>
+
+        {inputMode === 'manual' ? (
+          <form className="add-item-form" onSubmit={addManualItem} noValidate>
+            <label className="dash-field">
+              <span>{t('product')}</span>
+              <input value={manualItem.description} onChange={(event) => updateManualField('description', event.target.value)} />
+              {manualErrors.description && <small className="field-error">{manualErrors.description}</small>}
+            </label>
+            <div className="form-grid-two">
+              <label className="dash-field">
+                <span>{t('qty')}</span>
+                <input inputMode="decimal" value={manualItem.quantity} onChange={(event) => updateManualField('quantity', event.target.value)} />
+                {manualErrors.quantity && <small className="field-error">{manualErrors.quantity}</small>}
+              </label>
+              <label className="dash-field">
+                <span>{t('currency')}</span>
+                <div className="currency-toggle">
+                  <button className={manualItem.currency === 'KHR' ? 'active' : ''} type="button" onClick={() => updateManualField('currency', 'KHR')}>KHR</button>
+                  <button className={manualItem.currency === 'USD' ? 'active' : ''} type="button" onClick={() => updateManualField('currency', 'USD')}>USD</button>
+                </div>
+              </label>
+            </div>
+            <label className="dash-field">
+              <span>{t('unitPrice')}</span>
+              <div className="currency-input-wrap">
+                <input inputMode="decimal" value={manualItem.unit_price} onChange={(event) => updateManualField('unit_price', event.target.value)} />
+                <b>{manualItem.currency}</b>
+              </div>
+              {manualErrors.unit_price && <small className="field-error">{manualErrors.unit_price}</small>}
+            </label>
+            <button className="primary-action" type="submit"><Plus size={16} />{t('addToInvoice')}</button>
+          </form>
+        ) : (
+          <section className="unified-voice-panel">
+            <div className={`voice-status-card ${recordingMode}`}>
+              <span className="voice-status-icon"><AudioLines size={28} /></span>
+              <div>
+                <strong>{t(recordingMode === 'recording' ? 'recording' : recordingMode === 'paused' ? 'paused' : recordingMode === 'captured' ? 'captured' : recordingMode === 'processing' ? 'transcribing' : recordingMode === 'clarification' ? 'answerQuestion' : 'assistantTitle')}</strong>
+                <small>{recordingMode === 'idle' ? t('assistantSubtitle') : t('listeningSale')}</small>
+              </div>
+              <b>{formatElapsed(elapsed)}</b>
+            </div>
+            <Waveform active={recordingMode === 'recording' || recordingMode === 'processing'} />
+            <div className="voice-action-grid">
+              {(recordingMode === 'idle' || recordingMode === 'clarification') && <button className="primary-action" type="button" onClick={() => startRecording(recordingMode === 'clarification' ? 'followup' : 'sale')}><AudioLines size={16} />{recordingMode === 'clarification' ? t('answerByVoice') : t('recordSale')}</button>}
+              {(recordingMode === 'recording' || recordingMode === 'paused') && <button className="outline-action" type="button" onClick={pauseRecording}>{recordingMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}{recordingMode === 'paused' ? t('resumeRecording') : t('pauseRecording')}</button>}
+              {(recordingMode === 'recording' || recordingMode === 'paused') && <button className="danger-action" type="button" onClick={stopRecording}><Square size={16} />{t('stopRecording')}</button>}
+              {recordingMode === 'captured' && <button className="outline-action" type="button" onClick={restartRecording}><RotateCcw size={16} />{t('rerecord')}</button>}
+              {recordingMode === 'captured' && <button className="primary-action" type="button" onClick={sendRecording}><Send size={16} />{t('sendRecording')}</button>}
+              {voiceResult?.record && <button className="outline-action" type="button" onClick={() => startRecording('continue')}><Plus size={16} />{t('addAnotherItem')}</button>}
+              {voiceResult?.record && <button className="outline-action" type="button" onClick={openQuickEdit}><Edit3 size={16} />{t('quickEditDraft')}</button>}
+            </div>
+            {(transcript || history.length > 0) && (
+              <section className="transcript-panel">
+                <h3>{t('liveTranscription')}</h3>
+                {history.map((entry, index) => <p key={`${entry.role}-${index}`} className={`chat-bubble ${entry.role}`}>{entry.text}</p>)}
+                {!history.length && <p>{transcript}</p>}
+              </section>
+            )}
+            {recordingMode === 'clarification' && (
+              <form className="followup-form unified-followup" onSubmit={submitFollowup}>
+                <input value={answerText} onChange={(event) => setAnswerText(event.target.value)} placeholder={voiceResult?.question || t('followupPlaceholder')} disabled={isAnswering} />
+                <button className="primary-action" type="submit" disabled={isAnswering || !answerText.trim()}>{isAnswering ? t('sendingAnswer') : t('sendAnswer')}</button>
+              </form>
+            )}
+          </section>
+        )}
+
+        {error && <p className="review-error-message">{error}</p>}
+
+        <section className="draft-sale-panel">
+          <div className="section-title-row">
+            <h3 className="section-heading">{t('saleDraft')}</h3>
+            <span>{draftItems.length} {t('items')}</span>
+          </div>
+          <section className="review-items-card">
+            <div className="review-grid review-head">
+              <span>{t('product')}</span><span>{t('qty')}</span><span>{t('unitPrice')}</span><span>{t('total')}</span>
+            </div>
+            {!draftItems.length && <p className="empty-state-copy">{t('noReviewItems')}</p>}
+            {draftItems.map((item) => {
+              const unitPrice = resolveUnitPrice(item);
+              const currency = resolveCurrency(item);
+              return (
+                <button className="review-grid review-row" type="button" key={item.id} onClick={() => setEditingItem(item)}>
+                  <span>{item.description || item.product}</span>
+                  <span>{item.quantity}</span>
+                  <span>{formatCurrencyValue(unitPrice, currency)}</span>
+                  <span>{formatCurrencyValue(Number(item.quantity || 0) * unitPrice, currency)}</span>
+                </button>
+              );
+            })}
+          </section>
+          <section className="sale-total-section">
+            <div><strong>{t('totalUsdLabel')}</strong><span>{totals.usdLabel}</span></div>
+            <div><strong>{t('totalKhrLabel')}</strong><span>{totals.khrLabel}</span></div>
+          </section>
+          <section className="screen-actions two-col">
+            <button className="primary-action" type="button" onClick={confirmAndSave} disabled={saving || !draftItems.length}><Check size={16} />{saving ? t('saving') : t('confirmSaveSale')}</button>
+          </section>
+        </section>
+      </section>
+      <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onDelete={deleteItem} onSave={saveEditedItem} />
     </MobileAppShell>
   );
 }

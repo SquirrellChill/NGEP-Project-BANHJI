@@ -36,7 +36,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="landing-wrapper">
+    <div className="landing-wrapper" id="top">
       <header className="navbar-container">
         <nav className="navbar" aria-label="Primary">
           <button className="brand-button" type="button" onClick={() => navigate('/')}>
@@ -74,7 +74,7 @@ export default function LandingPage() {
       </header>
 
       <main>
-        <section className="hero-section">
+        <section className="hero-section" id="about">
           <div className="hero-badge">
             <Zap size={15} fill="currentColor" />
             {t('heroBadge')}
@@ -169,6 +169,27 @@ export default function LandingPage() {
           </button>
         </section>
       </main>
+
+      <footer className="public-footer" aria-label={t('footerLabel')}>
+        <div className="public-footer-inner">
+          <section className="public-footer-brand">
+            <StitchBrand />
+            <p>{t('footerDescription')}</p>
+          </section>
+          <nav className="public-footer-links" aria-label={t('footerNavigation')}>
+            <a href="#top">{t('home')}</a>
+            <a href="#features">{t('features')}</a>
+            <a href="#about">{t('about')}</a>
+            <Link to="/terms">{t('terms')}</Link>
+            <Link to="/privacy">{t('privacy')}</Link>
+          </nav>
+          <section className="public-footer-contact" aria-label={t('contact')}>
+            <strong>{t('contact')}</strong>
+            <a href="mailto:support@kotchomnol.ai">support@kotchomnol.ai</a>
+          </section>
+        </div>
+        <p className="public-footer-copy">{t('copyright', { year: new Date().getFullYear() })}</p>
+      </footer>
     </div>
   );
 }

@@ -21,6 +21,7 @@ export default function StitchAuthLayout({ title, subtitle, children, footer }) 
           <p>{subtitle}</p>
         </section>
         <section className="stitch-auth-panel">
+          <Link className="auth-home-link" to="/">{t('backToHomepage')}</Link>
           {children}
           {footer && <div className="stitch-auth-footer">{footer}</div>}
           <p className="stitch-legal-note">
