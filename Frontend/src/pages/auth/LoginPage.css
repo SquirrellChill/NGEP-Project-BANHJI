@@ -341,3 +341,53 @@ html[data-theme='dark'] .stitch-status:not(.error):not(.success) {
 html[data-theme='dark'] .auth-home-link {
   color: #ddd6fe;
 }
+
+/* Responsive hardening for testing release */
+.stitch-auth-page,
+.stitch-auth-shell,
+.stitch-auth-panel,
+.stitch-auth-hero {
+  max-width: 100%;
+}
+
+.stitch-form-header h2,
+.stitch-form-header p,
+.stitch-auth-hero h1,
+.stitch-auth-hero p,
+.stitch-field span,
+.stitch-status,
+.stitch-auth-footer,
+.stitch-legal-note {
+  overflow-wrap: anywhere;
+}
+
+.stitch-submit-button,
+.auth-home-link,
+.stitch-field input {
+  touch-action: manipulation;
+}
+
+@media (max-width: 560px) {
+  .stitch-auth-hero {
+    padding: 24px 16px 26px;
+  }
+
+  .stitch-auth-panel {
+    padding: 26px 16px 32px;
+  }
+
+  .stitch-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-label-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stitch-field input,
+  .stitch-submit-button {
+    min-height: 48px;
+  }
+}

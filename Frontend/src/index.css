@@ -65,10 +65,32 @@ body {
   font-family: var(--font-sans);
   color: var(--color-text-dark);
   background-color: var(--color-page-bg);
+  overflow-x: hidden;
 }
 
 button {
   font-family: inherit;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  min-width: 0;
 }
 
 html[lang='km'] body,
@@ -140,3 +162,4 @@ select {
   padding: 16px 20px;
   box-shadow: 0 14px 40px var(--color-shadow);
 }
+
