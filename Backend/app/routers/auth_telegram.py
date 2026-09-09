@@ -18,7 +18,7 @@ def telegram_login(payload: TelegramAuthRequest, db: Session = Depends(get_db)):
     except TelegramAuthError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
-    telegram_id = claims["id"]
+    telegram_id = int(claims["sub"])
     user = user_repo.find_user_by_telegram_id(db, telegram_id)
 
     if not user:

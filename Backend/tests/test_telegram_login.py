@@ -1,11 +1,15 @@
 import time
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jose import jwk, jwt
 
 from app.core.config import settings
+from app.routers import auth_telegram
+from app.schemas.user import TelegramAuthRequest
 from app.services.telegram_service import TelegramAuthError, verify_telegram_login
 
 
@@ -31,19 +35,20 @@ class TelegramLoginVerificationTests(unittest.TestCase):
     def tearDown(self):
         settings.TELEGRAM_CLIENT_ID = self.original_client_id
 
-    def _token(self, **overrides):
+    def _token(self, omit=(), **overrides):
         now = int(time.time())
         claims = {
             "iss": "https://oauth.telegram.org",
             "aud": settings.TELEGRAM_CLIENT_ID,
             "sub": "987654321",
-            "id": 987654321,
             "iat": now,
             "exp": now + 300,
             "name": "Test Seller",
             "given_name": "Test",
         }
         claims.update(overrides)
+        for claim in omit:
+            claims.pop(claim, None)
         return jwt.encode(
             claims,
             self.private_pem,
@@ -54,7 +59,7 @@ class TelegramLoginVerificationTests(unittest.TestCase):
     def test_accepts_a_valid_telegram_id_token(self):
         claims = verify_telegram_login(self._token(), self.jwks)
 
-        self.assertEqual(claims["id"], 987654321)
+        self.assertEqual(claims["sub"], "987654321")
         self.assertEqual(claims["given_name"], "Test")
 
     def test_rejects_a_token_for_another_client(self):
@@ -65,9 +70,41 @@ class TelegramLoginVerificationTests(unittest.TestCase):
         with self.assertRaisesRegex(TelegramAuthError, "Invalid or expired"):
             verify_telegram_login(self._token(exp=int(time.time()) - 1), self.jwks)
 
-    def test_rejects_a_mismatched_subject(self):
-        with self.assertRaisesRegex(TelegramAuthError, "subject does not match"):
-            verify_telegram_login(self._token(sub="111222333"), self.jwks)
+    def test_rejects_a_missing_subject(self):
+        with self.assertRaisesRegex(TelegramAuthError, "invalid subject"):
+            verify_telegram_login(self._token(omit={"sub"}), self.jwks)
+
+    def test_rejects_a_non_numeric_subject(self):
+        with self.assertRaisesRegex(TelegramAuthError, "invalid subject"):
+            verify_telegram_login(self._token(sub="not-a-telegram-id"), self.jwks)
+
+    def test_login_route_uses_verified_subject_as_telegram_id(self):
+        db = Mock()
+        user = SimpleNamespace(
+            user_id=1,
+            first_name="Test",
+            last_name="Seller",
+            email=None,
+            phone_number="tg_987654321",
+            is_verified=False,
+        )
+        claims = {"sub": "987654321", "given_name": "Test"}
+
+        with (
+            patch.object(auth_telegram, "verify_telegram_login", return_value=claims),
+            patch.object(
+                auth_telegram.user_repo,
+                "find_user_by_telegram_id",
+                return_value=user,
+            ) as find_user,
+            patch.object(auth_telegram, "create_access_token", return_value="test-token"),
+        ):
+            response = auth_telegram.telegram_login(
+                TelegramAuthRequest(id_token="signed-token"), db
+            )
+
+        find_user.assert_called_once_with(db, 987654321)
+        self.assertEqual(response["data"]["token"], "test-token")
 
 
 if __name__ == "__main__":

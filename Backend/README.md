@@ -116,6 +116,19 @@ hostname produces Telegram's “Bot invalid domain” message.
 
 The test page posts the widget result to `POST /auth/telegram/login`.
 
+For the production frontend, add all of these URLs to the bot's Login Widget
+Allowed URLs in BotFather:
+
+```text
+https://kotchomnol.vercel.app
+https://kotchomnol.vercel.app/login
+https://kotchomnol.vercel.app/register
+```
+
+Telegram's JavaScript SDK sets `redirect_uri` to the current origin and path,
+so both pages containing the Telegram button must be registered. The Render
+API endpoint is not an OAuth redirect URI.
+
 ## Main API groups
 
 - `/auth/*` — register, verify email, login, logout, password reset

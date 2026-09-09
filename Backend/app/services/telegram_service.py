@@ -69,11 +69,8 @@ def verify_telegram_login(id_token: str, jwks: dict | None = None) -> dict:
     except JWTError as exc:
         raise TelegramAuthError("Invalid or expired Telegram ID token.") from exc
 
-    telegram_id = claims.get("id")
     subject = claims.get("sub")
-    if isinstance(telegram_id, bool) or not isinstance(telegram_id, int):
-        raise TelegramAuthError("Telegram ID token is missing the user ID.")
-    if str(telegram_id) != str(subject):
-        raise TelegramAuthError("Telegram ID token subject does not match the user ID.")
+    if not isinstance(subject, str) or not subject.isdecimal() or int(subject) <= 0:
+        raise TelegramAuthError("Telegram ID token has an invalid subject.")
 
     return claims
