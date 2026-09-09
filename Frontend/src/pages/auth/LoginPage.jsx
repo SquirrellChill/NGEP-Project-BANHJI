@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import TelegramLoginButton from './TelegramLoginButton';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { getErrorMessage } from '../../services/authService';
@@ -9,7 +10,7 @@ import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithTelegram } = useAuth();
   const { t } = useLanguage();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -31,6 +32,16 @@ export default function LoginPage() {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTelegramAuth = async (telegramUser) => {
+    setError('');
+    try {
+      await loginWithTelegram(telegramUser);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -75,6 +86,10 @@ export default function LoginPage() {
           {loading ? t('signingIn') : t('signIn')}
         </button>
       </form>
+
+      <div className="stitch-divider">ឬ</div>
+      <TelegramLoginButton onAuth={handleTelegramAuth} onError={setError} />
+
     </StitchAuthLayout>
   );
 }

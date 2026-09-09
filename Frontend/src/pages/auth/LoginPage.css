@@ -342,52 +342,55 @@ html[data-theme='dark'] .auth-home-link {
   color: #ddd6fe;
 }
 
-/* Responsive hardening for testing release */
-.stitch-auth-page,
-.stitch-auth-shell,
-.stitch-auth-panel,
-.stitch-auth-hero {
-  max-width: 100%;
+
+.telegram-login-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #229ED9;   /* Telegram blue */
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.stitch-form-header h2,
-.stitch-form-header p,
-.stitch-auth-hero h1,
-.stitch-auth-hero p,
-.stitch-field span,
-.stitch-status,
-.stitch-auth-footer,
-.stitch-legal-note {
-  overflow-wrap: anywhere;
+.telegram-login-btn:hover {
+  background: #1c8bc0;
 }
 
-.stitch-submit-button,
-.auth-home-link,
-.stitch-field input {
-  touch-action: manipulation;
+.telegram-login-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
-@media (max-width: 560px) {
-  .stitch-auth-hero {
-    padding: 24px 16px 26px;
-  }
+.stitch-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;             /* ← adjust this to change spacing above/below */
+  color: #969393;
+  font-size: 13px;
+  font-weight: 600;
+}
 
-  .stitch-auth-panel {
-    padding: 26px 16px 32px;
-  }
+.stitch-divider::before,
+.stitch-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eae6f5;
+}
 
-  .stitch-form-grid {
-    grid-template-columns: 1fr;
-  }
+.stitch-divider::before {
+  margin-right: 12px;
+}
 
-  .field-label-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .stitch-field input,
-  .stitch-submit-button {
-    min-height: 48px;
-  }
+.stitch-divider::after {
+  margin-left: 12px;
 }
