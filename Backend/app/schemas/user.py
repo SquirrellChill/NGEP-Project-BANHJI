@@ -49,7 +49,7 @@ class UserOut(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr | None
-    phone_number: str
+    phone_number: str | None
     is_verified: bool
 
     class Config:
@@ -63,10 +63,4 @@ class TokenResponse(BaseModel):
 
 
 class TelegramAuthRequest(BaseModel):
-    id: int
-    first_name: str | None = None
-    last_name: str | None = None
-    username: str | None = None
-    photo_url: str | None = None
-    auth_date: int
-    hash: str
+    id_token: str = Field(min_length=1)

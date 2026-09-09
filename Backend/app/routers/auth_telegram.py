@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -14,20 +15,36 @@ router = APIRouter(prefix="/auth/telegram", tags=["auth-telegram"])
 @router.post("/login")
 def telegram_login(payload: TelegramAuthRequest, db: Session = Depends(get_db)):
     try:
-        verify_telegram_login(payload.model_dump())
+        claims = verify_telegram_login(payload.id_token)
     except TelegramAuthError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
-    user = user_repo.find_user_by_telegram_id(db, payload.id)
+    telegram_id = int(claims["sub"])
+    user = user_repo.find_user_by_telegram_id(db, telegram_id)
 
     if not user:
-        user = user_repo.create_user_telegram(
-            db,
-            telegram_id=payload.id,
-            telegram_username=payload.username,
-            first_name=payload.first_name,
-            last_name=payload.last_name,
-        )
+        try:
+            user = user_repo.create_user_telegram(
+                db,
+                telegram_id=telegram_id,
+                telegram_username=claims.get("preferred_username"),
+                first_name=claims.get("given_name") or claims.get("name") or "Telegram User",
+                last_name=claims.get("family_name") or "",
+            )
+        except IntegrityError as exc:
+            db.rollback()
+            user = user_repo.find_user_by_telegram_id(db, telegram_id)
+            if not user:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Unable to create Telegram account.",
+                ) from exc
+        except SQLAlchemyError as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to complete Telegram login.",
+            ) from exc
 
     token = create_access_token({"id": user.user_id})
 

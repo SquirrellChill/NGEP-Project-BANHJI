@@ -19,7 +19,7 @@ CREATE TABLE users (
     user_id         INT AUTO_INCREMENT PRIMARY KEY,
     first_name      VARCHAR(100)    NULL,   -- unknown until profile completed (Telegram signup)
     last_name       VARCHAR(100)    NULL,
-    phone_number    VARCHAR(20)     NOT NULL,
+    phone_number    VARCHAR(20)     NULL,
     email           VARCHAR(255)    NULL,
     password_hash   VARCHAR(255)    NULL,   -- NULL for Telegram-only accounts
 

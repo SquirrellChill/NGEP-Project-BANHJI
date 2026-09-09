@@ -36,9 +36,10 @@ class Settings(BaseSettings):
     # Comma-separated frontend origins allowed to call the API.
     FRONTEND_URL: str = "http://localhost:5173"
 
-    # Telegram Login Widget (leave blank to disable Telegram Login)
+    # Telegram Login (leave the client ID blank to disable Telegram Login)
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_BOT_USERNAME: str = ""
+    TELEGRAM_CLIENT_ID: str = ""
 
     # SMS provider (False = print OTP codes to console instead of sending)
     SMS_PROVIDER_ENABLED: bool = False
