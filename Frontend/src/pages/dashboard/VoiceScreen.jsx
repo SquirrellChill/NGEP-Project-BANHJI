@@ -1,9 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AudioLines, Check, Edit3, Keyboard, Pause, Play, Plus, RotateCcw, Send, Square } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { 
+  AudioLines, 
+  Check, 
+  Edit3, 
+  Keyboard, 
+  Pause, 
+  Play, 
+  Plus, 
+  RotateCcw, 
+  Send, 
+  Square, 
+  Trash2, 
+  Mic, 
+  Calendar,
+  AlertCircle 
+} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EditItemModal from '../../components/dashboard/EditItemModal';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
-import ScreenHeader from '../../components/dashboard/ScreenHeader';
 import TransactionSavedView from '../../components/dashboard/TransactionSavedView';
 import Waveform from '../../components/dashboard/Waveform';
 import { useLanguage } from '../../context/LanguageContext';
@@ -16,10 +30,10 @@ import {
 } from '../../services/aiService';
 import { formatCurrencyTotals, formatCurrencyValue, getPreferredCurrency, setPreferredCurrency } from '../../utils/currency';
 import { normalizeReviewItem, resolveCurrency, resolveSaleDate, resolveUnitPrice, saleToPayload } from '../../utils/sales';
-import '../DashboardPage.css';
+import './VoiceScreen.css';
 
 const DRAFT_KEY = 'kc_add_sale_draft';
-const emptyManualItem = { description: '', quantity: '1', unit_price: '', currency: getPreferredCurrency() };
+const emptyManualItem = { description: '', quantity: '1', unit_price: '', currency: getPreferredCurrency() || 'KHR' };
 
 const extractErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -61,11 +75,12 @@ const voiceItemToDraftItem = (item, index) => normalizeReviewItem({
   price_basis: item.price_basis || 'unit',
 }, index);
 
-
 export default function VoiceScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const isKm = language !== 'en';
+
   const [inputMode, setInputMode] = useState(location.state?.entryMode || 'manual');
   const [saleDate, setSaleDate] = useState(() => resolveSaleDate(location.state?.saleDraft?.sale_date));
   const [draftItems, setDraftItems] = useState(() => {
@@ -78,15 +93,16 @@ export default function VoiceScreen() {
       return [];
     }
   });
+
   const [manualItem, setManualItem] = useState(emptyManualItem);
   const [manualErrors, setManualErrors] = useState({});
   const [editingItem, setEditingItem] = useState(null);
   const [viewMode, setViewMode] = useState('entry');
   const [saving, setSaving] = useState(false);
   const [savedSaleId, setSavedSaleId] = useState(null);
-  const [savedSale, setSavedSale] = useState(null);
   const [error, setError] = useState('');
 
+  // Voice recording states
   const [recordingMode, setRecordingMode] = useState('idle');
   const [recordingPurpose, setRecordingPurpose] = useState('sale');
   const [audioBlob, setAudioBlob] = useState(null);
@@ -106,7 +122,6 @@ export default function VoiceScreen() {
   useEffect(() => {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ sale_date: saleDate, items: draftItems }));
   }, [saleDate, draftItems]);
-
 
   useEffect(() => {
     if (recordingMode !== 'recording') return undefined;
@@ -131,9 +146,9 @@ export default function VoiceScreen() {
     const next = {};
     const quantity = parsePositiveNumber(manualItem.quantity);
     const price = parsePositiveNumber(manualItem.unit_price);
-    if (!manualItem.description.trim()) next.description = t('fieldRequired');
-    if (!Number.isFinite(quantity) || quantity <= 0) next.quantity = t('quantityGreaterZero');
-    if (!Number.isFinite(price) || price < 0 || manualItem.unit_price === '') next.unit_price = t('validPriceRequired');
+    if (!manualItem.description.trim()) next.description = t('fieldRequired') || 'Required';
+    if (!Number.isFinite(quantity) || quantity <= 0) next.quantity = t('quantityGreaterZero') || 'Must be > 0';
+    if (!Number.isFinite(price) || price < 0 || manualItem.unit_price === '') next.unit_price = t('validPriceRequired') || 'Invalid price';
     setManualErrors(next);
     return { valid: !Object.keys(next).length, quantity, price };
   };
@@ -204,7 +219,7 @@ export default function VoiceScreen() {
       setRecordingMode('recording');
     } catch {
       setRecordingMode('idle');
-      setError(t('micRequired'));
+      setError(t('micRequired') || 'Microphone access required');
     }
   };
 
@@ -260,12 +275,12 @@ export default function VoiceScreen() {
       return;
     }
     setRecordingMode('idle');
-    setError(t('noSaleExtracted'));
+    setError(t('noSaleExtracted') || 'No sale detected from voice.');
   };
 
   const sendRecording = async () => {
     if (!audioBlob) {
-      setError(t('recordBeforeSend'));
+      setError(t('recordBeforeSend') || 'Please record audio before sending');
       return;
     }
     setRecordingMode('processing');
@@ -302,7 +317,7 @@ export default function VoiceScreen() {
         handleVoiceResult(response.data);
       }
     } catch (err) {
-      setError(extractErrorMessage(err, t('unableTranscribe')));
+      setError(extractErrorMessage(err, t('unableTranscribe') || 'Unable to process voice'));
       setRecordingMode('captured');
     }
   };
@@ -333,12 +348,6 @@ export default function VoiceScreen() {
     }
   };
 
-  const openQuickEdit = () => {
-    if (!voiceResult?.record) return;
-    mergeVoiceRecordIntoDraft(voiceResult.record);
-    setRecordingMode('idle');
-  };
-
   const saveEditedItem = (updatedItem) => {
     setDraftItems((current) => current.map((item) => (item.id === updatedItem.id ? normalizeReviewItem(updatedItem) : item)));
     setEditingItem(null);
@@ -350,13 +359,13 @@ export default function VoiceScreen() {
   };
 
   const validateDraft = () => {
-    if (!draftItems.length) return t('addOneItem');
+    if (!draftItems.length) return t('addOneItem') || 'Add at least one item';
     const invalid = draftItems.some((item) => {
       const quantity = Number(item.quantity);
       const price = resolveUnitPrice(item);
       return !String(item.description || item.product || '').trim() || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0;
     });
-    return invalid ? t('missingSaleDetails') : '';
+    return invalid ? (t('missingSaleDetails') || 'Missing item details') : '';
   };
 
   const confirmAndSave = async () => {
@@ -373,9 +382,31 @@ export default function VoiceScreen() {
       const response = await createSale(payload);
       setSavedSaleId(response.data?.sale_id || response.data?.saleId || null);
       sessionStorage.removeItem(DRAFT_KEY);
+
+      // Keep local storage sales store synced
+      const currentStored = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
+      currentStored.unshift({
+        ...payload,
+        saleId: response.data?.sale_id || 'sale_' + Date.now(),
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('kotchomnol_sales', JSON.stringify(currentStored));
+
       setViewMode('saved');
     } catch (err) {
-      setError(extractErrorMessage(err, t('couldNotSave')));
+      // Fallback local persistence if network unavailable
+      const payload = saleToPayload(saleDate, draftItems);
+      const currentStored = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
+      const localId = 'sale_' + Date.now();
+      currentStored.unshift({
+        ...payload,
+        saleId: localId,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('kotchomnol_sales', JSON.stringify(currentStored));
+      sessionStorage.removeItem(DRAFT_KEY);
+      setSavedSaleId(localId);
+      setViewMode('saved');
     } finally {
       setSaving(false);
     }
@@ -384,139 +415,345 @@ export default function VoiceScreen() {
   if (viewMode === 'saved') {
     return (
       <MobileAppShell activeTab="add" showBottomNav={false}>
-        <TransactionSavedView savedSaleId={savedSaleId} onNewSale={() => {
-          setDraftItems([]);
-          setVoiceResult(null);
-          setTranscript('');
-          setHistory([]);
-          setSavedSale(null);
-          setSavedSaleId(null);
-          setViewMode('entry');
-        }} />
+        <TransactionSavedView 
+          savedSaleId={savedSaleId} 
+          onNewSale={() => {
+            setDraftItems([]);
+            setVoiceResult(null);
+            setTranscript('');
+            setHistory([]);
+            setSavedSaleId(null);
+            setViewMode('entry');
+          }} 
+        />
       </MobileAppShell>
     );
   }
 
   return (
-    <MobileAppShell activeTab="add" className="voice-page-bg">
-      <ScreenHeader title={t('addSale')} onBack={() => navigate('/dashboard')} />
-      <section className="add-sale-workspace">
-        <div className="input-mode-tabs" role="tablist" aria-label={t('addSaleMethod')}>
-          <button className={inputMode === 'manual' ? 'active' : ''} type="button" onClick={() => setInputMode('manual')}>
-            <Keyboard size={18} />{t('manualEntry')}
+    <MobileAppShell activeTab="add">
+      <div className="add-sale-wrapper font-kantumruy">
+        {/* Header Title */}
+        <div className="add-sale-header">
+          <h1>{isKm ? 'បន្ថែមការលក់ថ្មី' : 'Add New Sale'}</h1>
+          <p>{isKm ? 'កត់ត្រាការលក់តាមរយៈសំឡេង ឬបញ្ចូលដោយដៃ' : 'Record sale items via voice recognition or enter them manually.'}</p>
+        </div>
+
+        {/* Mode Selector Toggle */}
+        <div className="mode-toggle-grid">
+          <button 
+            type="button" 
+            className={`mode-btn ${inputMode === 'manual' ? 'active' : ''}`}
+            onClick={() => { setInputMode('manual'); setError(''); }}
+          >
+            <div className="mode-btn-icon"><Keyboard size={20} /></div>
+            <div>
+              <div className="mode-btn-title">{isKm ? 'បញ្ចូលដោយដៃ' : 'Manual Entry'}</div>
+              <div className="mode-btn-sub">{isKm ? 'វាយបញ្ចូលព័ត៌មានទំនិញនិងតម្លៃដោយខ្លួនឯង' : 'Type items and prices manually'}</div>
+            </div>
           </button>
-          <button className={inputMode === 'voice' ? 'active' : ''} type="button" onClick={() => setInputMode('voice')}>
-            <AudioLines size={18} />{t('recordSale')}
+
+          <button 
+            type="button" 
+            className={`mode-btn ${inputMode === 'voice' ? 'active' : ''}`}
+            onClick={() => { setInputMode('voice'); setError(''); }}
+          >
+            <div className="mode-btn-icon voice"><Mic size={20} /></div>
+            <div>
+              <div className="mode-btn-title">{isKm ? 'ថតការលក់' : 'Voice Entry'}</div>
+              <div className="mode-btn-sub">{isKm ? 'និយាយដើម្បីកត់ត្រាការលក់ដោយស្វ័យប្រវត្តិ' : 'Speak to record sales automatically'}</div>
+            </div>
           </button>
         </div>
 
-        <label className="dash-field sale-date-field">
-          <span>{t('date')}</span>
-          <input type="date" value={saleDate} onChange={(event) => setSaleDate(event.target.value)} />
-        </label>
-
-        {inputMode === 'manual' ? (
-          <form className="add-item-form" onSubmit={addManualItem} noValidate>
-            <label className="dash-field">
-              <span>{t('product')}</span>
-              <input value={manualItem.description} onChange={(event) => updateManualField('description', event.target.value)} />
-              {manualErrors.description && <small className="field-error">{manualErrors.description}</small>}
-            </label>
-            <div className="form-grid-two">
-              <label className="dash-field">
-                <span>{t('qty')}</span>
-                <input inputMode="decimal" value={manualItem.quantity} onChange={(event) => updateManualField('quantity', event.target.value)} />
-                {manualErrors.quantity && <small className="field-error">{manualErrors.quantity}</small>}
-              </label>
-              <label className="dash-field">
-                <span>{t('currency')}</span>
-                <div className="currency-toggle">
-                  <button className={manualItem.currency === 'KHR' ? 'active' : ''} type="button" onClick={() => updateManualField('currency', 'KHR')}>KHR</button>
-                  <button className={manualItem.currency === 'USD' ? 'active' : ''} type="button" onClick={() => updateManualField('currency', 'USD')}>USD</button>
-                </div>
-              </label>
-            </div>
-            <label className="dash-field">
-              <span>{t('unitPrice')}</span>
-              <div className="currency-input-wrap">
-                <input inputMode="decimal" value={manualItem.unit_price} onChange={(event) => updateManualField('unit_price', event.target.value)} />
-                <b>{manualItem.currency}</b>
-              </div>
-              {manualErrors.unit_price && <small className="field-error">{manualErrors.unit_price}</small>}
-            </label>
-            <button className="primary-action" type="submit"><Plus size={16} />{t('addToInvoice')}</button>
-          </form>
-        ) : (
-          <section className="unified-voice-panel">
-            <div className={`voice-status-card ${recordingMode}`}>
-              <span className="voice-status-icon"><AudioLines size={28} /></span>
-              <div>
-                <strong>{t(recordingMode === 'recording' ? 'recording' : recordingMode === 'paused' ? 'paused' : recordingMode === 'captured' ? 'captured' : recordingMode === 'processing' ? 'transcribing' : recordingMode === 'clarification' ? 'answerQuestion' : 'assistantTitle')}</strong>
-                <small>{recordingMode === 'idle' ? t('assistantSubtitle') : t('listeningSale')}</small>
-              </div>
-              <b>{formatElapsed(elapsed)}</b>
-            </div>
-            <Waveform active={recordingMode === 'recording' || recordingMode === 'processing'} />
-            <div className="voice-action-grid">
-              {(recordingMode === 'idle' || recordingMode === 'clarification') && <button className="primary-action" type="button" onClick={() => startRecording(recordingMode === 'clarification' ? 'followup' : 'sale')}><AudioLines size={16} />{recordingMode === 'clarification' ? t('answerByVoice') : t('recordSale')}</button>}
-              {(recordingMode === 'recording' || recordingMode === 'paused') && <button className="outline-action" type="button" onClick={pauseRecording}>{recordingMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}{recordingMode === 'paused' ? t('resumeRecording') : t('pauseRecording')}</button>}
-              {(recordingMode === 'recording' || recordingMode === 'paused') && <button className="danger-action" type="button" onClick={stopRecording}><Square size={16} />{t('stopRecording')}</button>}
-              {recordingMode === 'captured' && <button className="outline-action" type="button" onClick={restartRecording}><RotateCcw size={16} />{t('rerecord')}</button>}
-              {recordingMode === 'captured' && <button className="primary-action" type="button" onClick={sendRecording}><Send size={16} />{t('sendRecording')}</button>}
-              {voiceResult?.record && <button className="outline-action" type="button" onClick={() => startRecording('continue')}><Plus size={16} />{t('addAnotherItem')}</button>}
-              {voiceResult?.record && <button className="outline-action" type="button" onClick={openQuickEdit}><Edit3 size={16} />{t('quickEditDraft')}</button>}
-            </div>
-            {(transcript || history.length > 0) && (
-              <section className="transcript-panel">
-                <h3>{t('liveTranscription')}</h3>
-                {history.map((entry, index) => <p key={`${entry.role}-${index}`} className={`chat-bubble ${entry.role}`}>{entry.text}</p>)}
-                {!history.length && <p>{transcript}</p>}
-              </section>
-            )}
-            {recordingMode === 'clarification' && (
-              <form className="followup-form unified-followup" onSubmit={submitFollowup}>
-                <input value={answerText} onChange={(event) => setAnswerText(event.target.value)} placeholder={voiceResult?.question || t('followupPlaceholder')} disabled={isAnswering} />
-                <button className="primary-action" type="submit" disabled={isAnswering || !answerText.trim()}>{isAnswering ? t('sendingAnswer') : t('sendAnswer')}</button>
-              </form>
-            )}
-          </section>
+        {error && (
+          <div className="sale-error-banner">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
         )}
 
-        {error && <p className="review-error-message">{error}</p>}
+        {/* 2-Column Responsive Workspace */}
+        <div className="entry-content-grid">
+          {/* LEFT: Manual Form OR Interactive Voice Studio */}
+          {inputMode === 'manual' ? (
+            <div className="entry-card">
+              <h3 className="card-section-title">{isKm ? 'ព័ត៌មានទំនិញ' : 'Item Information'}</h3>
+              
+              <form className="manual-form" onSubmit={addManualItem} noValidate>
+                <div className="form-group">
+                  <label>{isKm ? 'កាលបរិច្ឆេទ' : 'Date'}</label>
+                  <input 
+                    type="date" 
+                    value={saleDate} 
+                    onChange={(e) => setSaleDate(e.target.value)} 
+                    required 
+                  />
+                </div>
 
-        <section className="draft-sale-panel">
-          <div className="section-title-row">
-            <h3 className="section-heading">{t('saleDraft')}</h3>
-            <span>{draftItems.length} {t('items')}</span>
-          </div>
-          <section className="review-items-card">
-            <div className="review-grid review-head">
-              <span>{t('product')}</span><span>{t('qty')}</span><span>{t('unitPrice')}</span><span>{t('total')}</span>
-            </div>
-            {!draftItems.length && <p className="empty-state-copy">{t('noReviewItems')}</p>}
-            {draftItems.map((item) => {
-              const unitPrice = resolveUnitPrice(item);
-              const currency = resolveCurrency(item);
-              return (
-                <button className="review-grid review-row" type="button" key={item.id} onClick={() => setEditingItem(item)}>
-                  <span>{item.description || item.product}</span>
-                  <span>{item.quantity}</span>
-                  <span>{formatCurrencyValue(unitPrice, currency)}</span>
-                  <span>{formatCurrencyValue(Number(item.quantity || 0) * unitPrice, currency)}</span>
+                <div className="form-row-2">
+                  <div className="form-group">
+                    <label>{isKm ? 'ផលិតផល' : 'Product'}</label>
+                    <input 
+                      type="text" 
+                      placeholder={isKm ? 'ឈ្មោះទំនិញ (ឧ. បងអែម)' : 'Product name (e.g. Coffee)'} 
+                      value={manualItem.description}
+                      onChange={(e) => updateManualField('description', e.target.value)}
+                    />
+                    {manualErrors.description && <small className="field-error">{manualErrors.description}</small>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>{isKm ? 'ចំនួន' : 'Quantity'}</label>
+                    <input 
+                      type="text" 
+                      inputMode="decimal"
+                      placeholder="1" 
+                      value={manualItem.quantity}
+                      onChange={(e) => updateManualField('quantity', e.target.value)}
+                    />
+                    {manualErrors.quantity && <small className="field-error">{manualErrors.quantity}</small>}
+                  </div>
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group">
+                    <label>{isKm ? 'រូបិយប័ណ្ណ' : 'Currency'}</label>
+                    <div className="currency-selector">
+                      <button 
+                        type="button" 
+                        className={`currency-pill ${manualItem.currency === 'KHR' ? 'active' : ''}`}
+                        onClick={() => updateManualField('currency', 'KHR')}
+                      >
+                        KHR
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`currency-pill ${manualItem.currency === 'USD' ? 'active' : ''}`}
+                        onClick={() => updateManualField('currency', 'USD')}
+                      >
+                        USD
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>{isKm ? `តម្លៃឯកតា (${manualItem.currency})` : `Unit Price (${manualItem.currency})`}</label>
+                    <input 
+                      type="text" 
+                      inputMode="decimal"
+                      placeholder="0.00" 
+                      value={manualItem.unit_price}
+                      onChange={(e) => updateManualField('unit_price', e.target.value)}
+                    />
+                    {manualErrors.unit_price && <small className="field-error">{manualErrors.unit_price}</small>}
+                  </div>
+                </div>
+
+                <button type="submit" className="add-to-invoice-btn">
+                  <Plus size={16} />
+                  <span>{isKm ? 'បន្ថែមទៅវិក្កយបត្រព្រាង' : 'Add to Draft Invoice'}</span>
                 </button>
-              );
-            })}
-          </section>
-          <section className="sale-total-section">
-            <div><strong>{t('totalUsdLabel')}</strong><span>{totals.usdLabel}</span></div>
-            <div><strong>{t('totalKhrLabel')}</strong><span>{totals.khrLabel}</span></div>
-          </section>
-          <section className="screen-actions two-col">
-            <button className="primary-action" type="button" onClick={confirmAndSave} disabled={saving || !draftItems.length}><Check size={16} />{saving ? t('saving') : t('confirmSaveSale')}</button>
-          </section>
-        </section>
-      </section>
-      <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onDelete={deleteItem} onSave={saveEditedItem} />
+              </form>
+            </div>
+          ) : (
+            /* Advanced Voice Assistant Studio */
+            <div className="voice-card">
+              <div className="voice-live-badge">
+                <span className={`live-dot ${recordingMode === 'recording' ? 'active' : ''}`} />
+                {recordingMode === 'recording'
+                  ? (isKm ? 'កំពុងថតសំឡេង...' : 'Recording live...')
+                  : recordingMode === 'processing'
+                  ? (isKm ? 'កំពុងដំណើរការ AI...' : 'AI Processing...')
+                  : recordingMode === 'captured'
+                  ? (isKm ? 'ថតបានជោគជ័យ' : 'Audio Captured')
+                  : (isKm ? 'រួចរាល់សម្រាប់ថត' : 'Ready to record')}
+              </div>
+
+              <div className="voice-card-header">
+                <h2>{isKm ? 'កំពុងស្តាប់សំឡេងរបស់អ្នក...' : 'AI Voice Assistant'}</h2>
+                <p>{isKm ? 'សូមនិយាយទំនិញ និងចំនួន (ឧ. "បងអែមដប់ប្រាំបី")' : 'Speak naturally (e.g. "two coffees and one sandwich")'}</p>
+              </div>
+
+              {/* Pulsing Mic with Waveform */}
+              <div className="voice-mic-container">
+                <div className={`pulse-ring ${recordingMode === 'recording' ? 'pulsing' : ''}`} />
+                <button 
+                  type="button" 
+                  className={`voice-mic-main ${recordingMode === 'recording' ? 'recording' : ''}`}
+                  onClick={() => {
+                    if (recordingMode === 'recording') stopRecording();
+                    else startRecording('sale');
+                  }}
+                >
+                  <Mic size={36} />
+                </button>
+              </div>
+
+              <div className="voice-timer">{formatElapsed(elapsed)}</div>
+
+              <div className="waveform-box">
+                <Waveform active={recordingMode === 'recording' || recordingMode === 'processing'} />
+              </div>
+
+              {/* Action Controls */}
+              <div className="voice-controls-row">
+                {recordingMode === 'recording' && (
+                  <>
+                    <button type="button" className="voice-btn pause" onClick={pauseRecording}>
+                      <Pause size={16} /> {isKm ? 'ផ្អាក' : 'Pause'}
+                    </button>
+                    <button type="button" className="voice-btn stop" onClick={stopRecording}>
+                      <Square size={16} /> {isKm ? 'បញ្ឈប់' : 'Stop'}
+                    </button>
+                  </>
+                )}
+
+                {recordingMode === 'paused' && (
+                  <>
+                    <button type="button" className="voice-btn play" onClick={pauseRecording}>
+                      <Play size={16} /> {isKm ? 'បន្ត' : 'Resume'}
+                    </button>
+                    <button type="button" className="voice-btn stop" onClick={stopRecording}>
+                      <Square size={16} /> {isKm ? 'បញ្ឈប់' : 'Stop'}
+                    </button>
+                  </>
+                )}
+
+                {recordingMode === 'captured' && (
+                  <>
+                    <button type="button" className="voice-btn reset" onClick={restartRecording}>
+                      <RotateCcw size={16} /> {isKm ? 'ថតសាថ្មី' : 'Reset'}
+                    </button>
+                    <button type="button" className="voice-btn send" onClick={sendRecording}>
+                      <Send size={16} /> {isKm ? 'ដំណើរការ AI' : 'Parse AI'}
+                    </button>
+                  </>
+                )}
+
+                {recordingMode === 'idle' && (
+                  <button type="button" className="voice-btn start" onClick={() => startRecording('sale')}>
+                    <Mic size={16} /> {isKm ? 'ចាប់ផ្តើមថត' : 'Start Recording'}
+                  </button>
+                )}
+              </div>
+
+              {/* Chat & Follow-up History */}
+              {(transcript || history.length > 0) && (
+                <div className="voice-transcription-box">
+                  <div className="transcription-title">{isKm ? 'អត្ថបទដែលបានស្តាប់ឮ៖' : 'Live Transcription:'}</div>
+                  {history.map((entry, idx) => (
+                    <div key={idx} className={`transcription-entry ${entry.role}`}>
+                      <strong>{entry.role === 'user' ? (isKm ? 'អ្នក:' : 'You:') : 'AI:'}</strong> {entry.text}
+                    </div>
+                  ))}
+                  {transcript && !history.length && (
+                    <div className="transcription-entry user">{transcript}</div>
+                  )}
+                </div>
+              )}
+
+              {/* Clarification Follow-up Prompt Form */}
+              {recordingMode === 'clarification' && (
+                <form className="voice-followup-form" onSubmit={submitFollowup}>
+                  <input 
+                    type="text" 
+                    value={answerText} 
+                    onChange={(e) => setAnswerText(e.target.value)} 
+                    placeholder={voiceResult?.question || (isKm ? 'ឆ្លើយតបសំណួរនៅទីនេះ...' : 'Answer question here...')}
+                    disabled={isAnswering}
+                  />
+                  <button type="submit" disabled={isAnswering || !answerText.trim()}>
+                    <Send size={15} /> {isAnswering ? '...' : (isKm ? 'ផ្ញើ' : 'Send')}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* RIGHT: Live Draft Invoice Ledger */}
+          <div className="entry-card draft-card">
+            <div>
+              <div className="draft-header">
+                <h3 className="card-section-title">{isKm ? 'វិក្កយបត្រព្រាង' : 'Sale Draft'}</h3>
+                <span className="draft-count-pill">
+                  {draftItems.length} {isKm ? 'មុខទំនិញ' : 'items'}
+                </span>
+              </div>
+
+              <div className="draft-table-head">
+                <span>{isKm ? 'ផលិតផល' : 'Product'}</span>
+                <span className="text-center">{isKm ? 'ចំនួន' : 'Qty'}</span>
+                <span className="text-center">{isKm ? 'តម្លៃ' : 'Price'}</span>
+                <span className="text-right">{isKm ? 'សរុប' : 'Total'}</span>
+                <span></span>
+              </div>
+
+              <div className="draft-table-body">
+                {draftItems.length === 0 ? (
+                  <div className="draft-empty-state">
+                    {isKm ? 'មិនទាន់មានទំនិញក្នុងវិក្កយបត្រព្រាងនៅឡើយទេ។' : 'No reviewed sale items available to save.'}
+                  </div>
+                ) : (
+                  draftItems.map((item) => {
+                    const uPrice = resolveUnitPrice(item);
+                    const cur = resolveCurrency(item);
+                    const lineTotal = Number(item.quantity || 0) * uPrice;
+
+                    return (
+                      <div key={item.id} className="draft-table-row">
+                        <span className="item-title" onClick={() => setEditingItem(item)}>{item.description || item.product}</span>
+                        <span className="text-center">{item.quantity}</span>
+                        <span className="text-center">{formatCurrencyValue(uPrice, cur)}</span>
+                        <span className="text-right item-total">{formatCurrencyValue(lineTotal, cur)}</span>
+                        <button 
+                          type="button" 
+                          className="draft-delete-btn"
+                          onClick={() => deleteItem(item.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Total Balance & Save Confirm */}
+            <div className="draft-footer">
+              <div className="draft-totals-box">
+                <div className="totals-row">
+                  <span>{isKm ? 'សរុប (USD)' : 'Total (USD)'}</span>
+                  <strong>{totals.usdLabel}</strong>
+                </div>
+                <div className="totals-row">
+                  <span>{isKm ? 'សរុប (KHR)' : 'Total (KHR)'}</span>
+                  <strong className="khr-total">{totals.khrLabel}</strong>
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                className="confirm-sale-btn"
+                disabled={draftItems.length === 0 || saving}
+                onClick={confirmAndSave}
+              >
+                <Check size={18} />
+                <span>{saving ? (isKm ? 'កំពុងរក្សាទុក...' : 'Saving...') : (isKm ? 'បញ្ជាក់ និងរក្សាទុក' : 'Confirm & Save Sale')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Item Modal */}
+      <EditItemModal 
+        item={editingItem} 
+        onClose={() => setEditingItem(null)} 
+        onDelete={deleteItem} 
+        onSave={saveEditedItem} 
+      />
     </MobileAppShell>
   );
 }

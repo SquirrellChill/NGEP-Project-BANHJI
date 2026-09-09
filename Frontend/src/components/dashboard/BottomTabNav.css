@@ -1,0 +1,63 @@
+/* Fixed bottom navigation for all mobile dashboard views */
+.global-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 62px;
+  background-color: #581c87;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 8px;
+  z-index: 9999;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
+  font-family: 'Kantumruy Pro', sans-serif;
+}
+
+.global-tab-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: #d8b4fe;
+  padding: 4px;
+  flex: 1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.global-tab-link span {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.global-tab-link.active,
+.global-tab-link:hover {
+  color: #ffffff;
+}
+
+/* Upright White Microphone Action Button */
+.global-mic-badge {
+  width: 26px;
+  height: 26px;
+  background-color: #ffffff;
+  color: #581c87;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.global-tab-link.featured-tab:hover .global-mic-badge {
+  transform: scale(1.15);
+  background-color: #f3e8ff;
+  color: #4c1d95;
+}

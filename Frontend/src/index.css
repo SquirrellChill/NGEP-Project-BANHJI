@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700;800;900&family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Global Brand Palette */
+  /* Global Brand Palette (Light Mode Base) */
   --color-brand-50: #f5f3ff;
   --color-brand-100: #ede9fe;
   --color-brand-500: #8b5cf6;
@@ -13,63 +13,51 @@
   --color-auth-primary: #7c3aed;
   --color-auth-primary-hover: #6d28d9;
   
-  --color-text-dark: #0f172a;
-  --color-text-muted: #64748b;
+  --color-text-dark: #1e1b4b;       /* High-contrast midnight indigo */
+  --color-text-muted: #64748b;      /* Slate text */
   --color-title: #1e1b4b;
-  --color-border: #e2e8f0;
-  --color-placeholder: #94a3b8;
+  --color-border: rgba(126, 34, 206, 0.15); /* Soft violet outline */
+  --color-placeholder: #a78bfa;
   --color-error: #ef4444;
   --color-success: #16a34a;
-  --color-page-bg: #eef2f7;
-  --color-surface: #ffffff;
-  --color-surface-soft: #f7f9fc;
-  --color-surface-muted: #f0f2f5;
-  --color-shadow: rgba(15, 23, 42, 0.12);
+  
+  /* Distinct Light Mode Canvas */
+  --color-page-bg: #f5f2fb;          /* Soft cool lavender tint */
+  --color-surface: #ffffff;          /* Pure crisp white cards */
+  --color-surface-soft: #fcfaff;     /* Elevated tile background */
+  --color-surface-muted: #eee9f7;    /* Subtle inset gray */
+  --color-shadow: rgba(126, 34, 206, 0.08); /* Violet tinted glow */
 
-  --radius: 12px;
+  --radius: 14px;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-khmer: 'Noto Sans Khmer';
+  --font-khmer: 'Kantumruy Pro', 'Noto Sans Khmer', sans-serif;
 }
 
+/* Deep Midnight & Electric Violet Theme for Dark Mode */
 html[data-theme='dark'] {
-  --color-brand-50: #22143d;
-  --color-brand-100: #2e1d55;
-  --color-brand-500: #a78bfa;
-  --color-brand-600: #c4b5fd;
-  --color-brand-700: #ddd6fe;
+  --color-brand-50: #1a0f30;
+  --color-brand-100: #2a164d;
+  --color-brand-500: #a855f7;
+  --color-brand-600: #c084fc;
+  --color-brand-700: #d8b4fe;
   --color-brand-900: #f5f3ff;
-  --color-auth-primary: #a78bfa;
-  --color-auth-primary-hover: #c4b5fd;
-  --color-text-dark: #f8fafc;
-  --color-text-muted: #cbd5e1;
-  --color-title: #eef2ff;
-  --color-border: #334155;
-  --color-placeholder: #94a3b8;
-  --color-page-bg: #0b1120;
-  --color-surface: #111827;
-  --color-surface-soft: #172033;
-  --color-surface-muted: #1f2937;
-  --color-shadow: rgba(0, 0, 0, 0.35);
+  --color-auth-primary: #a855f7;
+  --color-auth-primary-hover: #c084fc;
+  --color-text-dark: #ffffff;
+  --color-text-muted: #d8b4fe;
+  --color-title: #ffffff;
+  --color-border: rgba(168, 85, 247, 0.35);
+  --color-placeholder: #a855f7;
+  --color-page-bg: #090614;                 
+  --color-surface: #120d24;                 
+  --color-surface-soft: #181131;
+  --color-surface-muted: #211742;
+  --color-shadow: rgba(0, 0, 0, 0.6);
 }
 
 * {
   box-sizing: border-box;
-}
-
-* {
   min-width: 0;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  color: var(--color-text-dark);
-  background-color: var(--color-page-bg);
-  overflow-x: hidden;
-}
-
-button {
-  font-family: inherit;
 }
 
 html,
@@ -77,6 +65,21 @@ body,
 #root {
   width: 100%;
   max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-page-bg);
+  color: var(--color-text-dark);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body {
+  font-family: var(--font-khmer), var(--font-sans);
+  overflow-x: hidden;
+}
+
+button {
+  font-family: inherit;
 }
 
 img,
@@ -91,6 +94,7 @@ input,
 textarea,
 select {
   min-width: 0;
+  font: inherit;
 }
 
 html[lang='km'] body,
@@ -98,19 +102,13 @@ html[lang='km'] button,
 html[lang='km'] input,
 html[lang='km'] textarea,
 html[lang='km'] select {
-  font-family: var(--font-khmer), var(--font-sans);
+  font-family: var(--font-khmer);
 }
 
 a {
   color: var(--color-brand-600);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-}
-
-input,
-textarea,
-select {
-  font: inherit;
 }
 
 .form-error {
@@ -150,8 +148,8 @@ select {
   display: grid;
   place-items: center;
   background: var(--color-page-bg);
-  color: var(--color-brand-600);
-  font-family: var(--font-sans);
+  color: var(--color-brand-500);
+  font-family: var(--font-khmer), var(--font-sans);
   font-weight: 800;
 }
 
@@ -160,6 +158,6 @@ select {
   border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 16px 20px;
-  box-shadow: 0 14px 40px var(--color-shadow);
+  box-shadow: 0 14px 30px var(--color-shadow);
+  color: var(--color-text-dark);
 }
-

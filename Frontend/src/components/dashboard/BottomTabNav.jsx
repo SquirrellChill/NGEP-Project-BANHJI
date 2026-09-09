@@ -1,26 +1,62 @@
-import { ClipboardList, History, Home, PlusCircle, User } from 'lucide-react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { Home, BarChart3, Mic, Receipt, User } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import './BottomTabNav.css';
 
 export default function BottomTabNav({ activeTab }) {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
+  const isKm = language !== 'en';
 
   return (
-    <nav className="bottom-tab-nav" aria-label={t('dashboardNavigation')}>
-      <NavItem active={activeTab === 'home'} to="/dashboard" icon={<Home size={22} />} label={t('dashboard')} />
-      <NavItem active={activeTab === 'history'} to="/dashboard/history" icon={<History size={22} />} label={t('history')} />
-      <NavItem active={activeTab === 'add'} to="/dashboard/voice" icon={<PlusCircle size={24} />} label={t('addSale')} featured />
-      <NavItem active={activeTab === 'transactions'} to="/dashboard/transactions" icon={<ClipboardList size={22} />} label={t('transactions')} />
-      <NavItem active={activeTab === 'profile'} to="/dashboard/profile" icon={<User size={22} />} label={t('profile')} />
+    <nav className="global-bottom-bar" aria-label="Bottom Navigation">
+      {/* 1. Home */}
+      <NavLink 
+        to="/dashboard" 
+        end
+        className={({ isActive }) => `global-tab-link ${isActive || activeTab === 'home' ? 'active' : ''}`}
+      >
+        <Home size={20} />
+        <span>{isKm ? 'ទំព័រដើម' : 'Home'}</span>
+      </NavLink>
+
+      {/* 2. Dashboard */}
+      <NavLink 
+        to="/dashboard/history" 
+        className={({ isActive }) => `global-tab-link ${isActive || activeTab === 'history' || activeTab === 'dashboard' ? 'active' : ''}`}
+      >
+        <BarChart3 size={20} />
+        <span>{isKm ? 'ផ្ទាំងគ្រប់គ្រង' : 'Dashboard'}</span>
+      </NavLink>
+
+      {/* 3. Add Sale (Centered Featured Action) */}
+      <NavLink 
+        to="/dashboard/voice" 
+        className={({ isActive }) => `global-tab-link featured-tab ${isActive || activeTab === 'add' ? 'active' : ''}`}
+      >
+        <span className="global-mic-badge">
+          <Mic size={16} strokeWidth={2.4} />
+        </span>
+        <span>{isKm ? 'បន្ថែមការលក់' : 'Add Sale'}</span>
+      </NavLink>
+
+      {/* 4. Sales Records */}
+      <NavLink 
+        to="/dashboard/transactions" 
+        className={({ isActive }) => `global-tab-link ${isActive || activeTab === 'transactions' ? 'active' : ''}`}
+      >
+        <Receipt size={20} />
+        <span>{isKm ? 'កំណត់ត្រាការលក់' : 'Sales Records'}</span>
+      </NavLink>
+
+      {/* 5. Profile */}
+      <NavLink 
+        to="/dashboard/profile" 
+        className={({ isActive }) => `global-tab-link ${isActive || activeTab === 'profile' ? 'active' : ''}`}
+      >
+        <User size={20} />
+        <span>{isKm ? 'ប្រវត្តិរូប' : 'Profile'}</span>
+      </NavLink>
     </nav>
-  );
-}
-
-function NavItem({ active, to, icon, label, featured = false }) {
-  return (
-    <NavLink className={`tab-nav-item ${featured ? 'featured' : ''} ${active ? 'active' : ''}`} to={to}>
-      {icon}
-      <span>{label}</span>
-    </NavLink>
   );
 }
