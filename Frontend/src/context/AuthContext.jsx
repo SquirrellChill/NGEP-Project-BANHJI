@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as authService from '../services/authService.js';
-
+import *as telegramAuthService from '../services/telegramAuthService.js';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -35,6 +35,16 @@ export function AuthProvider({ children }) {
     setUser(loggedInUser);
     return loggedInUser;
   };
+  
+  const loginWithTelegram = async (telegramUser) => {
+  const res = await telegramAuthService.loginWithTelegram(telegramUser);
+  const { token, user: loggedInUser } = res.data.data;
+  const value = { user, loading, login, loginWithTelegram, logout, updateUser, isAuthenticated: !!user };
+  localStorage.setItem('kc_token', token);
+  localStorage.setItem('kc_user', JSON.stringify(loggedInUser));
+  setUser(loggedInUser);
+  return loggedInUser;
+};
 
   const logout = async () => {
     try {

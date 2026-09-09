@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
 import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
+import TelegramLoginButton from './TelegramLoginButton';
+import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { getErrorMessage, register } from '../../services/authService';
 import './LoginPage.css';
@@ -17,6 +19,7 @@ const emptyForm = {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { loginWithTelegram } = useAuth();
   const { t } = useLanguage();
   const [formData, setFormData] = useState(emptyForm);
   const [error, setError] = useState('');
@@ -86,6 +89,16 @@ export default function RegisterPage() {
     }
   };
 
+  const handleTelegramAuth = async (telegramUser) => {
+    setError('');
+    try {
+      await loginWithTelegram(telegramUser);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
   return (
     <StitchAuthLayout
       title={t('createAccount')}
@@ -134,6 +147,10 @@ export default function RegisterPage() {
           {loading ? t('registering') : t('register')}
         </button>
       </form>
+
+      <div className="stitch-divider">ឬ</div>
+      <TelegramLoginButton onAuth={handleTelegramAuth} onError={setError} />
+     
     </StitchAuthLayout>
   );
 }
