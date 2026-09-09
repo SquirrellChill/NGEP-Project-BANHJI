@@ -49,7 +49,7 @@ class UserOut(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr | None
-    phone_number: str
+    phone_number: str | None
     is_verified: bool
 
     class Config:

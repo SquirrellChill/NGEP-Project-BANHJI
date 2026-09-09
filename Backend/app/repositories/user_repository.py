@@ -26,17 +26,13 @@ def create_user_telegram(
     db: Session, telegram_id: int, telegram_username: str | None,
     first_name: str | None, last_name: str | None
 ) -> User:
-    """
-    Telegram users still need a phone_number (NOT NULL + UNIQUE in our schema),
-    so we generate a placeholder they can replace later via profile update.
-    """
-    placeholder_phone = f"tg_{telegram_id}"
     user = User(
         telegram_id=telegram_id,
         telegram_username=telegram_username,
         first_name=first_name,
         last_name=last_name,
-        phone_number=placeholder_phone,
+        phone_number=None,
+        password_hash=None,
     )
     db.add(user)
     db.commit()

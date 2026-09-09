@@ -5,7 +5,9 @@ from unittest.mock import Mock, patch
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import HTTPException
 from jose import jwk, jwt
+from sqlalchemy.exc import DataError, IntegrityError
 
 from app.core.config import settings
 from app.routers import auth_telegram
@@ -85,7 +87,7 @@ class TelegramLoginVerificationTests(unittest.TestCase):
             first_name="Test",
             last_name="Seller",
             email=None,
-            phone_number="tg_987654321",
+            phone_number=None,
             is_verified=False,
         )
         claims = {"sub": "987654321", "given_name": "Test"}
@@ -105,6 +107,70 @@ class TelegramLoginVerificationTests(unittest.TestCase):
 
         find_user.assert_called_once_with(db, 987654321)
         self.assertEqual(response["data"]["token"], "test-token")
+
+    def test_login_route_recovers_from_duplicate_identity_race(self):
+        db = Mock()
+        user = SimpleNamespace(
+            user_id=1,
+            first_name="Test",
+            last_name="Seller",
+            email=None,
+            phone_number=None,
+            is_verified=False,
+        )
+        claims = {"sub": "987654321", "given_name": "Test"}
+        duplicate = IntegrityError("INSERT users", {}, Exception("duplicate"))
+
+        with (
+            patch.object(auth_telegram, "verify_telegram_login", return_value=claims),
+            patch.object(
+                auth_telegram.user_repo,
+                "find_user_by_telegram_id",
+                side_effect=[None, user],
+            ),
+            patch.object(
+                auth_telegram.user_repo,
+                "create_user_telegram",
+                side_effect=duplicate,
+            ),
+            patch.object(auth_telegram, "create_access_token", return_value="test-token"),
+        ):
+            response = auth_telegram.telegram_login(
+                TelegramAuthRequest(id_token="signed-token"), db
+            )
+
+        db.rollback.assert_called_once_with()
+        self.assertEqual(response["data"]["token"], "test-token")
+
+    def test_login_route_hides_database_error_details(self):
+        db = Mock()
+        claims = {"sub": "987654321", "given_name": "Test"}
+
+        with (
+            patch.object(auth_telegram, "verify_telegram_login", return_value=claims),
+            patch.object(
+                auth_telegram.user_repo,
+                "find_user_by_telegram_id",
+                return_value=None,
+            ),
+            patch.object(
+                auth_telegram.user_repo,
+                "create_user_telegram",
+                side_effect=DataError(
+                    "INSERT users",
+                    {},
+                    Exception("internal database details"),
+                ),
+            ),
+            self.assertRaises(HTTPException) as raised,
+        ):
+            auth_telegram.telegram_login(
+                TelegramAuthRequest(id_token="signed-token"), db
+            )
+
+        db.rollback.assert_called_once_with()
+        self.assertEqual(raised.exception.status_code, 500)
+        self.assertEqual(raised.exception.detail, "Unable to complete Telegram login.")
 
 
 if __name__ == "__main__":

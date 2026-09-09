@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, TIMESTAMP, func
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -10,9 +10,9 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
-    phone_number = Column(String(20), nullable=False, unique=True)
+    phone_number = Column(String(20), nullable=True, unique=True)
     email = Column(String(255), nullable=True, unique=True)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)
 
     # Email Verification
     is_verified = Column(Boolean, nullable=False, default=False)
@@ -22,7 +22,7 @@ class User(Base):
     email_verification_locked_until = Column(DateTime(timezone=True), nullable=True)
 
     # Telegram Auth
-    telegram_id = Column(Integer, nullable=True, unique=True)
+    telegram_id = Column(BigInteger, nullable=True, unique=True)
     telegram_username = Column(String(255), nullable=True)
 
     # Password Reset
