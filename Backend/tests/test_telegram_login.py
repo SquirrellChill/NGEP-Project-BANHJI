@@ -1,81 +1,74 @@
-"""
-Simulates a Telegram Login Widget request, using your real bot token to sign
-the payload exactly the way Telegram would. Lets you test /auth/telegram/login
-without needing a live domain for the actual widget yet.
-
-Run from inside Backend/, with your server already running in another
-terminal (uvicorn app.main:app --reload):
-
-    python test_telegram_login.py
-"""
-
-import hashlib
-import hmac
 import time
-import json
-import urllib.request
-import urllib.error
+import unittest
 
-from dotenv import load_dotenv
-import os
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jose import jwk, jwt
 
-load_dotenv()
-
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_URL = "http://127.0.0.1:8000/auth/telegram/login"
+from app.core.config import settings
+from app.services.telegram_service import TelegramAuthError, verify_telegram_login
 
 
-def sign_telegram_data(data: dict, bot_token: str) -> dict:
-    """Signs data exactly the way Telegram's widget does."""
-    data = dict(data)
-    check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
-    secret_key = hashlib.sha256(bot_token.encode()).digest()
-    data["hash"] = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-    return data
+class TelegramLoginVerificationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        cls.private_pem = cls.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        cls.public_jwk = jwk.construct(
+            cls.private_key.public_key(), algorithm="RS256"
+        ).to_dict()
+        cls.public_jwk["kid"] = "test-key"
+        cls.jwks = {"keys": [cls.public_jwk]}
 
+    def setUp(self):
+        self.original_client_id = settings.TELEGRAM_CLIENT_ID
+        settings.TELEGRAM_CLIENT_ID = "123456789"
 
-def post_json(url: str, payload: dict):
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return resp.status, json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read().decode())
+    def tearDown(self):
+        settings.TELEGRAM_CLIENT_ID = self.original_client_id
 
+    def _token(self, **overrides):
+        now = int(time.time())
+        claims = {
+            "iss": "https://oauth.telegram.org",
+            "aud": settings.TELEGRAM_CLIENT_ID,
+            "sub": "987654321",
+            "id": 987654321,
+            "iat": now,
+            "exp": now + 300,
+            "name": "Test Seller",
+            "given_name": "Test",
+        }
+        claims.update(overrides)
+        return jwt.encode(
+            claims,
+            self.private_pem,
+            algorithm="RS256",
+            headers={"kid": "test-key"},
+        )
 
-def main():
-    if not BOT_TOKEN:
-        print("ERROR: TELEGRAM_BOT_TOKEN not found in .env")
-        print("Add this line to Backend/.env and try again:")
-        print("  TELEGRAM_BOT_TOKEN=your_real_token_here")
-        return
+    def test_accepts_a_valid_telegram_id_token(self):
+        claims = verify_telegram_login(self._token(), self.jwks)
 
-    fake_login = {
-        "id": 111222333,  # fake Telegram user ID, fine for testing
-        "first_name": "Kimheng",
-        "username": "kimheng_test",
-        "auth_date": int(time.time()),
-    }
-    signed = sign_telegram_data(fake_login, BOT_TOKEN)
+        self.assertEqual(claims["id"], 987654321)
+        self.assertEqual(claims["given_name"], "Test")
 
-    print("=== Sending signed Telegram login request ===")
-    print(json.dumps(signed, indent=2))
-    print()
+    def test_rejects_a_token_for_another_client(self):
+        with self.assertRaisesRegex(TelegramAuthError, "Invalid or expired"):
+            verify_telegram_login(self._token(aud="different-client"), self.jwks)
 
-    status, body = post_json(API_URL, signed)
-    print(f"=== Response (HTTP {status}) ===")
-    print(json.dumps(body, indent=2))
+    def test_rejects_an_expired_token(self):
+        with self.assertRaisesRegex(TelegramAuthError, "Invalid or expired"):
+            verify_telegram_login(self._token(exp=int(time.time()) - 1), self.jwks)
 
-    if status == 200:
-        print("\nSUCCESS — Telegram login is working correctly.")
-    else:
-        print("\nFAILED — check the error above.")
+    def test_rejects_a_mismatched_subject(self):
+        with self.assertRaisesRegex(TelegramAuthError, "subject does not match"):
+            verify_telegram_login(self._token(sub="111222333"), self.jwks)
 
 
 if __name__ == "__main__":
-    main()
+    unittest.main()

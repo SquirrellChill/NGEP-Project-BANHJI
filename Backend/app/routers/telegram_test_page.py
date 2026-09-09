@@ -15,11 +15,11 @@ router = APIRouter()
 
 @router.get("/telegram-test", response_class=HTMLResponse)
 def telegram_test_page():
-    if not settings.TELEGRAM_BOT_USERNAME:
+    if not settings.TELEGRAM_CLIENT_ID:
         return HTMLResponse(
-            "<h2>TELEGRAM_BOT_USERNAME is not set in .env</h2>"
-            "<p>Add <code>TELEGRAM_BOT_USERNAME=your_bot_username</code> "
-            "(no @ symbol) to your .env file and restart the server.</p>",
+            "<h2>TELEGRAM_CLIENT_ID is not set in .env</h2>"
+            "<p>Add the Client ID shown in BotFather's Login Widget settings "
+            "and restart the server.</p>",
             status_code=500,
         )
 
@@ -31,23 +31,22 @@ def telegram_test_page():
         <h2>Telegram Login Test</h2>
         <p>Click below to log in with your real Telegram account.</p>
 
-        <script async src="https://telegram.org/js/telegram-widget.js?22"
-            data-telegram-login="{settings.TELEGRAM_BOT_USERNAME}"
-            data-size="large"
-            data-onauth="onTelegramAuth(user)"
+        <script async src="https://oauth.telegram.org/js/telegram-login.js?6"
+            data-client-id="{settings.TELEGRAM_CLIENT_ID}"
+            data-onauth="onTelegramAuth(data)"
             data-request-access="write">
         </script>
 
         <pre id="result" style="text-align: left; background: #f4f4f4; padding: 16px; margin-top: 24px; white-space: pre-wrap;"></pre>
 
         <script>
-        function onTelegramAuth(user) {{
-            document.getElementById('result').textContent = 'Sending to API...\\n' + JSON.stringify(user, null, 2);
+        function onTelegramAuth(data) {{
+            document.getElementById('result').textContent = 'Sending to API...';
 
             fetch('/auth/telegram/login', {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
-                body: JSON.stringify(user)
+                body: JSON.stringify({{ id_token: data.id_token }})
             }})
             .then(res => res.json().then(data => ({{ status: res.status, data }})))
             .then(({{ status, data }}) => {{

@@ -8,7 +8,7 @@ dashboard summaries, and voice-based sale capture.
 - Python 3.11 or newer
 - MySQL 8.0 or newer
 - A Gemini API key for the voice endpoints
-- A Telegram bot token and username when Telegram login is enabled
+- A Telegram Login Client ID when Telegram login is enabled
 
 ## Installation
 
@@ -45,6 +45,7 @@ GEMINI_API_KEY=
 
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_BOT_USERNAME=
+TELEGRAM_CLIENT_ID=
 
 SECRET_KEY=change-me
 ALGORITHM=HS256
@@ -59,8 +60,9 @@ MAIL_PORT=
 FRONTEND_URL=http://localhost:5173,http://localhost:5174
 ```
 
-`TELEGRAM_BOT_USERNAME` must not include `@`. Never commit `Backend/.env` or
-paste tokens into source control.
+Get `TELEGRAM_CLIENT_ID` from the bot's Login Widget settings in BotFather.
+Never commit `Backend/.env` or paste tokens or client secrets into source
+control.
 
 ## Database setup
 
@@ -101,9 +103,9 @@ Useful URLs:
 
 ## Telegram login test
 
-Telegram validates the page domain before it calls the backend. For local
-testing, expose port 8000 through an HTTPS tunnel such as ngrok, register the
-exact tunnel hostname with BotFather using `/setdomain`, and open:
+Telegram validates the page URL before it calls the backend. For local
+testing, expose port 8000 through an HTTPS tunnel such as ngrok, add the exact
+tunnel URL to the bot's Login Widget Allowed URLs in BotFather, and open:
 
 ```text
 https://<your-tunnel-host>/telegram-test
@@ -128,7 +130,7 @@ All transaction and voice routes require a bearer token from login. Voice
 processing returns a draft; save it through `/transactions` only after the
 seller confirms it.
 
-## Manual Telegram request test
+## Telegram verification tests
 
 With the API running and `Backend/.env` configured:
 
@@ -138,8 +140,8 @@ python tests\test_telegram_login.py
 cd ..
 ```
 
-This signs a test payload locally and sends it to the Telegram login endpoint;
-it does not replace the browser widget domain test.
+This verifies valid, expired, and incorrectly addressed Telegram ID tokens
+using an ephemeral test key; it does not use or print real credentials.
 
 ## Development notes
 

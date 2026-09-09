@@ -63,10 +63,4 @@ class TokenResponse(BaseModel):
 
 
 class TelegramAuthRequest(BaseModel):
-    id: int
-    first_name: str | None = None
-    last_name: str | None = None
-    username: str | None = None
-    photo_url: str | None = None
-    auth_date: int
-    hash: str
+    id_token: str = Field(min_length=1)
