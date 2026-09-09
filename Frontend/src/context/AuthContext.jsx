@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
   const loginWithTelegram = async (telegramUser) => {
   const res = await telegramAuthService.loginWithTelegram(telegramUser);
   const { token, user: loggedInUser } = res.data.data;
-  const value = { user, loading, login, loginWithTelegram, logout, updateUser, isAuthenticated: !!user };
+ 
   localStorage.setItem('kc_token', token);
   localStorage.setItem('kc_user', JSON.stringify(loggedInUser));
   setUser(loggedInUser);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
     setUser(nextUser);
   };
 
-  const value = { user, loading, login, logout, updateUser, isAuthenticated: !!user };
+const value = { user, loading, login, loginWithTelegram, logout, updateUser, isAuthenticated: !!user };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
