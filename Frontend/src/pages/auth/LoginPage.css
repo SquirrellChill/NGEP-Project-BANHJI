@@ -391,3 +391,56 @@ html[data-theme='dark'] .auth-home-link {
     min-height: 48px;
   }
 }
+
+
+.telegram-login-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #229ED9;   /* Telegram blue */
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.telegram-login-btn:hover {
+  background: #1c8bc0;
+}
+
+.telegram-login-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.stitch-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;             /* ← adjust this to change spacing above/below */
+  color: #969393;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stitch-divider::before,
+.stitch-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eae6f5;
+}
+
+.stitch-divider::before {
+  margin-right: 12px;
+}
+
+.stitch-divider::after {
+  margin-left: 12px;
+}
