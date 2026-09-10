@@ -19,7 +19,9 @@ const emptyForm = {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { loginWithTelegram } = useAuth();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const isKm = language !== 'en';
+
   const [formData, setFormData] = useState(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -204,7 +206,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Password & Confirm Password with Eye Toggles Inside Inputs */}
+                {/* Password & Confirm Password */}
                 <div className="pwd-form-grid-2">
                   <div>
                     <label htmlFor="password">{t('password') || 'Password'}</label>
@@ -262,7 +264,7 @@ export default function RegisterPage() {
 
               <div className="pwd-divider" style={{ margin: '4px 0 8px' }}>
                 <div className="pwd-divider-line" />
-                <span className="pwd-divider-text">ឬ</span>
+                <span className="pwd-divider-text">{isKm ? 'ឬ' : (t('or') || 'OR')}</span>
                 <div className="pwd-divider-line" />
               </div>
 

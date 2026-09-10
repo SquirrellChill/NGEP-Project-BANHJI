@@ -10,7 +10,9 @@ import '../dashboard/ChangePasswordScreen.css';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, loginWithTelegram } = useAuth();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const isKm = language !== 'en';
+
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -138,7 +140,7 @@ export default function LoginPage() {
 
               <div className="pwd-divider">
                 <div className="pwd-divider-line" />
-                <span className="pwd-divider-text">ឬ</span>
+                <span className="pwd-divider-text">{isKm ? 'ឬ' : (t('or') || 'OR')}</span>
                 <div className="pwd-divider-line" />
               </div>
 

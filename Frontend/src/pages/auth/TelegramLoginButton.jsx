@@ -1,58 +1,106 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 export default function TelegramLoginButton({ onAuth, onError }) {
-  const containerRef = useRef(null);
-
   useEffect(() => {
     const clientId = Number(import.meta.env.VITE_TELEGRAM_CLIENT_ID);
-    if (!Number.isSafeInteger(clientId) || clientId <= 0) {
-      onError?.('Telegram login is not configured correctly.');
+
+    console.log('Telegram Client ID:', clientId);
+
+    if (!clientId) {
+      onError?.('Telegram Client ID is missing.');
       return;
     }
 
-    // Define the global auth callback expected by the Telegram widget
-    window.onTelegramAuth = (data) => {
-      if (data?.id_token) {
-        onAuth({ id_token: data.id_token });
-      } else {
-        onError?.('Telegram login failed or was cancelled.');
+    const loadTelegram = () => {
+      if (!window.Telegram?.Login) {
+        console.error('Telegram Login SDK not available');
+        onError?.('Telegram Login SDK failed to load.');
+        return;
+      }
+
+      console.log('Telegram Login SDK ready');
+
+      window.Telegram.Login.init(
+        {
+          client_id: clientId,
+          request_access: 'write',
+          lang: 'en'
+        },
+        (data) => {
+          console.log('Telegram auth response:', data);
+
+          if (data?.id_token) {
+            onAuth({
+              id_token: data.id_token
+            });
+          } else {
+            onError?.(
+              data?.error || 'Telegram login was not completed.'
+            );
+          }
+        }
+      );
+
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.textContent = 'Log in with Telegram';
+
+      button.style.width = '100%';
+      button.style.height = '48px';
+      button.style.border = 'none';
+      button.style.borderRadius = '10px';
+      button.style.background = '#229ED9';
+      button.style.color = 'white';
+      button.style.fontSize = '16px';
+      button.style.fontWeight = '600';
+      button.style.cursor = 'pointer';
+
+      button.onclick = () => {
+        window.Telegram.Login.open();
+      };
+
+      const container = document.getElementById(
+        'telegram-login-button'
+      );
+
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(button);
       }
     };
 
-    // Clean previous widget if any
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
+    if (window.Telegram?.Login) {
+      loadTelegram();
+      return;
     }
 
-    // Create and attach the Telegram official widget script
     const script = document.createElement('script');
+
     script.src = 'https://oauth.telegram.org/js/telegram-login.js?6';
     script.async = true;
-    script.setAttribute('data-client-id', String(clientId));
-    script.setAttribute('data-onauth', 'onTelegramAuth(data)');
-    script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-radius', '12');
+
+    script.onload = loadTelegram;
 
     script.onerror = () => {
-      onError?.('Failed to load Telegram widget.');
+      console.error('Could not load Telegram Login SDK');
+      onError?.('Could not load Telegram Login SDK.');
     };
 
-    containerRef.current?.appendChild(script);
+    document.body.appendChild(script);
 
     return () => {
-      delete window.onTelegramAuth;
+      script.remove();
     };
-  }, [onAuth, onError]);
+  }, []);
 
   return (
     <div
-      ref={containerRef}
+      id="telegram-login-button"
       style={{
-        display: 'flex',
-        justifyContent: 'center',
-        margin: '12px 0',
-        minHeight: '44px',
+        width: '100%',
+        marginTop: '12px',
+        marginBottom: '12px'
       }}
     />
   );
