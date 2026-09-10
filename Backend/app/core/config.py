@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # e.g. mysql+pymysql://user:password@host:3306/kotchomnol
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/kotchomnol"
-
+    BACKEND_BASE_URL : str
     SECRET_KEY: str = "change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
