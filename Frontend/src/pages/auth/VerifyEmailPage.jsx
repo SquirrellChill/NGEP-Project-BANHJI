@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
+import { ArrowLeft, MailCheck, ShieldCheck } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import StitchAuthLayout from '../../components/stitch/StitchAuthLayout';
-import StitchStatusMessage from '../../components/stitch/StitchStatusMessage';
 import { useLanguage } from '../../context/LanguageContext';
 import { getErrorMessage, verifyEmail } from '../../services/authService';
-import './LoginPage.css';
+import '../dashboard/ChangePasswordScreen.css';
 
 export default function VerifyEmailPage() {
   const location = useLocation();
@@ -47,37 +46,88 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <StitchAuthLayout
-      title={t('verifyEmail')}
-      subtitle={t('verifySubtitle')}
-      footer={<>{t('alreadyVerified')} <Link to="/login">{t('signIn')}</Link></>}
-    >
-      <div className="stitch-form-header">
-        <h2>{t('verifyEmail')}</h2>
-        <p>{t('confirmEmail')}</p>
+    <div className="auth-page-container">
+      <div className="pwd-split-wrapper font-kantumruy" style={{ width: '100%' }}>
+        <div className="pwd-top-nav">
+          <button type="button" className="pwd-back-btn" onClick={() => navigate('/login')}>
+            <ArrowLeft size={16} />
+            <span>{t('backToSignIn') || 'Back to Login'}</span>
+          </button>
+        </div>
+
+        <div className="pwd-auth-card">
+          <div className="pwd-card-banner">
+            <div>
+              <div className="pwd-icon-badge">
+                <MailCheck size={22} />
+              </div>
+              <span className="pwd-brand-text">KOTCHOMNOL</span>
+              <h2 className="pwd-banner-title">
+                {t('verifyEmail') || 'Verify Email'}
+              </h2>
+              <p className="pwd-banner-desc">
+                {t('verifySubtitle') || 'Confirm your email address to complete your registration.'}
+              </p>
+            </div>
+
+            <div className="pwd-banner-footer">
+              <ShieldCheck size={16} />
+              <span>Encrypted & Secure authentication</span>
+            </div>
+          </div>
+
+          <div className="pwd-card-body">
+            <div className="pwd-form-header">
+              <h3>{t('verifyEmail') || 'Verify Email'}</h3>
+              <p>{t('confirmEmail') || 'Enter the code sent to your inbox.'}</p>
+            </div>
+
+            {error && <div className="pwd-alert-error">{error}</div>}
+
+            <div className="pwd-form-embed">
+              <form onSubmit={handleSubmit}>
+                <div>
+                  <label htmlFor="email">{t('email') || 'Email Address'}</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFieldErrors((current) => ({ ...current, email: '' }));
+                    }}
+                    required
+                  />
+                  {fieldErrors.email && <span style={{ color: '#ef4444', fontSize: '11px' }}>{fieldErrors.email}</span>}
+                </div>
+
+                <div>
+                  <label htmlFor="code">{t('verificationCode') || 'Verification Code'}</label>
+                  <input
+                    id="code"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value);
+                      setFieldErrors((current) => ({ ...current, code: '' }));
+                    }}
+                    required
+                  />
+                  {fieldErrors.code && <span style={{ color: '#ef4444', fontSize: '11px' }}>{fieldErrors.code}</span>}
+                </div>
+
+                <button type="submit" disabled={loading}>
+                  {loading ? (t('verifying') || 'Verifying...') : (t('verifyEmail') || 'Verify Email')}
+                </button>
+              </form>
+
+              <div className="pwd-footer-link">
+                {t('alreadyVerified') || 'Already verified?'}{' '}
+                <Link to="/login">{t('signIn') || 'Sign In'}</Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <StitchStatusMessage type="error">{error}</StitchStatusMessage>
-      <form onSubmit={handleSubmit} className="stitch-auth-form">
-        <label className="stitch-field">
-          <span>{t('email')}</span>
-          <input type="email" value={email} onChange={(e) => {
-            setEmail(e.target.value);
-            setFieldErrors((current) => ({ ...current, email: '' }));
-          }} required />
-          {fieldErrors.email && <small className="field-error">{fieldErrors.email}</small>}
-        </label>
-        <label className="stitch-field">
-          <span>{t('verificationCode')}</span>
-          <input value={code} onChange={(e) => {
-            setCode(e.target.value);
-            setFieldErrors((current) => ({ ...current, code: '' }));
-          }} required />
-          {fieldErrors.code && <small className="field-error">{fieldErrors.code}</small>}
-        </label>
-        <button type="submit" className="stitch-submit-button" disabled={loading}>
-          {loading ? t('verifying') : t('verifyEmail')}
-        </button>
-      </form>
-    </StitchAuthLayout>
+    </div>
   );
 }
