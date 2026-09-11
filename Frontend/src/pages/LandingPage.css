@@ -148,6 +148,7 @@ html {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 @media (min-width: 768px) {
@@ -172,6 +173,7 @@ html {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 @media (min-width: 640px) {
@@ -192,29 +194,44 @@ html {
 
 /* Floating Hamburger Trigger */
 .landing-hamburger-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgba(126, 34, 206, 0.2);
-  background-color: #ffffff;
-  color: #7e22ce;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  flex-shrink: 0 !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(126, 34, 206, 0.25) !important;
+  background-color: #ffffff !important;
+  color: #7e22ce !important;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.06);
+  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.08);
   transition: all 0.15s ease;
-  margin-left: 2px;
+  margin-left: 4px;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.landing-hamburger-btn svg {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  stroke-width: 2.2 !important;
+  display: block !important;
+  flex-shrink: 0 !important;
 }
 
 .landing-hamburger-btn:hover {
-  background-color: #f3e8ff;
-  border-color: #7e22ce;
+  background-color: #f3e8ff !important;
+  border-color: #7e22ce !important;
 }
 
 @media (min-width: 960px) {
   .landing-hamburger-btn {
-    display: none;
+    display: none !important;
   }
 }
 

@@ -1,12 +1,16 @@
 import hashlib
+import logging
 import secrets
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, formatdate, make_msgid
 
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 
 from app.core.config import settings
+
+logger = logging.getLogger("email_service")
 
 
 def _send_email(
@@ -15,41 +19,51 @@ def _send_email(
     body: str,
     html_body: str | None = None,
 ) -> None:
+    # Always log to terminal for local visibility and easy testing
+    print("\n" + "=" * 60)
+    print("📧 [OUTGOING EMAIL DISPATCH]")
+    print(f"To: {to_email}")
+    print(f"Subject: {subject}")
+    print(f"Content:\n{body}")
+    print("=" * 60 + "\n")
 
     if not settings.MAIL_SERVER:
-        print(f"\n--- [DEV EMAIL] To: {to_email} | Subject: {subject} ---")
-        print(body)
-        print("--- [END DEV EMAIL] ---\n")
+        print("[EMAIL NOTICE] MAIL_SERVER is not set. Use code from above.")
         return
+
+    from_name = getattr(settings, "MAIL_FROM_NAME", "KotChomnol")
+    from_email = settings.MAIL_FROM or settings.MAIL_USERNAME
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = settings.MAIL_FROM
+    msg["From"] = formataddr((from_name, from_email))
     msg["To"] = to_email
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain="gmail.com")
 
-    msg.attach(MIMEText(body, "plain"))
+    # Plain text fallback
+    msg.attach(MIMEText(body, "plain", "utf-8"))
 
+    # HTML body
     if html_body:
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP(
-        settings.MAIL_SERVER,
-        settings.MAIL_PORT,
-    ) as server:
+    try:
+        port = int(settings.MAIL_PORT or 587)
+        with smtplib.SMTP(settings.MAIL_SERVER, port, timeout=12) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
 
-        server.starttls()
+            if settings.MAIL_USERNAME and settings.MAIL_PASSWORD:
+                clean_pw = settings.MAIL_PASSWORD.replace(" ", "")
+                server.login(settings.MAIL_USERNAME, clean_pw)
 
-        if settings.MAIL_USERNAME and settings.MAIL_PASSWORD:
-            server.login(
-                settings.MAIL_USERNAME,
-                settings.MAIL_PASSWORD,
-            )
-
-        server.sendmail(
-            settings.MAIL_FROM,
-            [to_email],
-            msg.as_string(),
-        )
+            server.sendmail(from_email, [to_email], msg.as_string())
+            print(f"Email delivered successfully to {to_email}")
+    except Exception as exc:
+        print(f"[SMTP ERROR] Could not deliver email to {to_email}: {exc}")
+        print("Use the fallback code printed in the terminal box above.\n")
 
 
 def send_verification_email(
@@ -57,7 +71,6 @@ def send_verification_email(
     code: str,
     first_name: str,
 ) -> None:
-
     subject = "Your Verification Code - KotChomnol"
 
     body = (
@@ -68,35 +81,23 @@ def send_verification_email(
     )
 
     html_body = f"""
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2>Welcome to KotChomnol, {first_name}!</h2>
-
-        <p>
-            Please use the verification code below
-            to complete your registration:
-        </p>
-
-        <div style="
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 4px;
-            color: #2563eb;
-            margin: 20px 0;
-        ">
-            {code}
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e9d5ff; border-radius: 16px; background-color: #ffffff; color: #1e1b4b;">
+        <div style="margin-bottom: 20px;">
+            <span style="background-color: #7e22ce; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">KOTCHOMNOL</span>
         </div>
-
-        <p>This code expires in 15 minutes.</p>
-
-        <hr style="
-            border: none;
-            border-top: 1px solid #eee;
-            margin: 20px 0;
-        " />
-
-        <p style="font-size: 12px; color: #777;">
-            If you did not request this code,
-            no further action is required.
+        <h2 style="font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 0 0 12px 0;">Welcome, {first_name}!</h2>
+        <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
+            Please use the verification code below to verify your email address and activate your account:
+        </p>
+        <div style="text-align: center; margin: 24px 0;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; background-color: #f3e8ff; color: #7e22ce; padding: 14px 28px; border-radius: 12px; display: inline-block; border: 1px solid #d8b4fe;">{code}</span>
+        </div>
+        <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px 0;">
+            This verification code expires in 15 minutes.
+        </p>
+        <hr style="border: none; border-top: 1px solid #f3e8ff; margin: 24px 0 16px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; margin: 0; line-height: 1.5;">
+            If you did not register for KotChomnol, you can safely ignore this email.
         </p>
     </div>
     """
@@ -114,10 +115,8 @@ def send_password_reset_email(
     reset_token: str,
     first_name: str,
 ) -> None:
-
     subject = "Reset Your Password - KotChomnol"
 
-    # Safely select the first URL from comma-separated FRONTEND_URL
     frontend_base = settings.FRONTEND_URL.split(",")[0].strip().rstrip("/")
     reset_link = f"{frontend_base}/reset-password?token={reset_token}"
 
@@ -129,27 +128,26 @@ def send_password_reset_email(
     )
 
     html_body = f"""
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2>Password Reset Request</h2>
-
-        <p>
-            Hi {first_name}, click the button below
-            to reset your password:
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e9d5ff; border-radius: 16px; background-color: #ffffff; color: #1e1b4b;">
+        <div style="margin-bottom: 20px;">
+            <span style="background-color: #7e22ce; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">KOTCHOMNOL</span>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 0 0 12px 0;">Password Reset Request</h2>
+        <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
+            Hi {first_name}, click the button below to set a new password for your account:
         </p>
-
-        <a href="{reset_link}" style="
-            display: inline-block;
-            padding: 10px 20px;
-            color: #fff;
-            background-color: #2563eb;
-            border-radius: 5px;
-            text-decoration: none;
-            margin: 15px 0;
-        ">
-            Reset Password
-        </a>
-
-        <p>This link expires in 30 minutes.</p>
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{reset_link}" style="display: inline-block; padding: 12px 28px; color: #ffffff; background-color: #7e22ce; border-radius: 10px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(126, 34, 206, 0.25);">
+                Reset Password
+            </a>
+        </div>
+        <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px 0;">
+            This link expires in 30 minutes.
+        </p>
+        <hr style="border: none; border-top: 1px solid #f3e8ff; margin: 24px 0 16px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; margin: 0; line-height: 1.5;">
+            If you did not request this, please disregard this email.
+        </p>
     </div>
     """
 
@@ -166,7 +164,6 @@ def send_password_change_otp_email(
     code: str,
     first_name: str | None = None,
 ) -> None:
-
     name = first_name or "KotChomnol User"
     subject = "Password Change Verification Code - KotChomnol"
 
@@ -179,25 +176,24 @@ def send_password_change_otp_email(
     )
 
     html_body = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937;">
-        <h2 style="color: #7e22ce; margin-top: 0;">Password Change Verification</h2>
-        <p>Hi <b>{name}</b>,</p>
-        <p>You requested to change your KotChomnol account password. Enter the 6-digit verification code below to authorize this action:</p>
-
-        <div style="text-align: center; margin: 24px 0;">
-            <span style="
-                font-size: 30px;
-                font-weight: 700;
-                letter-spacing: 6px;
-                background-color: #f3e8ff;
-                color: #7e22ce;
-                padding: 12px 24px;
-                border-radius: 8px;
-                display: inline-block;
-            ">{code}</span>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e9d5ff; border-radius: 16px; background-color: #ffffff; color: #1e1b4b;">
+        <div style="margin-bottom: 20px;">
+            <span style="background-color: #7e22ce; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">KOTCHOMNOL</span>
         </div>
-
-        <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">This code expires in 15 minutes. If you did not make this request, someone may be trying to access your account.</p>
+        <h2 style="font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 0 0 12px 0;">Password Change Verification</h2>
+        <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
+            Hi <b>{name}</b>, enter the 6-digit verification code below to authorize changing your password:
+        </p>
+        <div style="text-align: center; margin: 24px 0;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; background-color: #f3e8ff; color: #7e22ce; padding: 14px 28px; border-radius: 12px; display: inline-block; border: 1px solid #d8b4fe;">{code}</span>
+        </div>
+        <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px 0;">
+            This code expires in 15 minutes.
+        </p>
+        <hr style="border: none; border-top: 1px solid #f3e8ff; margin: 24px 0 16px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; margin: 0; line-height: 1.5;">
+            If you did not make this request, someone may be trying to access your account.
+        </p>
     </div>
     """
 

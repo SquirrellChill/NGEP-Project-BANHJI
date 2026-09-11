@@ -272,7 +272,6 @@ export default function TransactionsScreen() {
 
   return (
     <MobileAppShell activeTab="transactions">
-      {/* Header Bar */}
       <div className="tx-screen-top-bar">
         {selectedSale && (
           <button
@@ -309,7 +308,6 @@ export default function TransactionsScreen() {
         />
       ) : (
         <div className="sales-records-container">
-          {/* Filtered Sales Summary */}
           <div className="records-summary-card">
             <div className="records-summary-header">
               <span>{isKm ? 'សរុបតាមការជ្រើសរើស' : 'Filtered Sales Total'}</span>
@@ -329,7 +327,6 @@ export default function TransactionsScreen() {
             </div>
           </div>
 
-          {/* Time Filter Pills */}
           <div className="time-filter-row">
             <button
               type="button"
@@ -361,7 +358,6 @@ export default function TransactionsScreen() {
             </button>
           </div>
 
-          {/* Search Bar */}
           <div className="records-search-bar">
             <Search size={16} />
             <input
@@ -372,7 +368,6 @@ export default function TransactionsScreen() {
             />
           </div>
 
-          {/* Sales List */}
           <section className="records-list">
             {loadingSales && (
               <div className="records-loading">
@@ -433,24 +428,27 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
   const receiptRef = useRef(null);
   const [exporting, setExporting] = useState(false);
 
-  // Normalized unified equivalent totals
   const totals = calculateEquivalentTotals({
     usd: sale.totalUSD,
     khr: sale.totalKHR,
     exchangeRate,
   });
 
+  const totalQty = (sale.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const formattedDate = sale.date ? new Date(sale.date).toLocaleDateString() : 'Today';
 
-  // Export as PNG Image
   const handleDownloadImage = async () => {
     if (!receiptRef.current || exporting) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+      const element = receiptRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
       });
       const link = document.createElement('a');
       link.download = `receipt_${sale.saleId || 'sale'}.png`;
@@ -463,23 +461,33 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
     }
   };
 
-  // Export as PDF Document
   const handleDownloadPDF = async () => {
     if (!receiptRef.current || exporting) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+      const element = receiptRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
       });
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width / 2, canvas.height / 2],
+        unit: 'pt',
+        format: 'a4',
       });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 24;
+      const printableWidth = pageWidth - margin * 2;
+      const printableHeight = (canvas.height * printableWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', margin, margin, printableWidth, printableHeight);
       pdf.save(`receipt_${sale.saleId || 'sale'}.pdf`);
     } catch (err) {
       console.error('Failed to export PDF:', err);
@@ -490,7 +498,6 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
 
   return (
     <section className="tx-detail-container">
-      {/* Export Bar Actions */}
       <div className="export-action-bar">
         <span className="export-hint-text">
           {isKm ? 'ទាញយកវិក្កយបត្រ៖' : 'Export Receipt:'}
@@ -503,7 +510,7 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
             disabled={exporting}
           >
             <ImageIcon size={15} />
-            <span>{exporting ? (isKm ? '...' : '...') : (isKm ? 'ជារូបភាព (PNG)' : 'Image (PNG)')}</span>
+            <span>{exporting ? '...' : (isKm ? 'ជារូបភាព (PNG)' : 'Image (PNG)')}</span>
           </button>
           <button 
             type="button" 
@@ -512,12 +519,11 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
             disabled={exporting}
           >
             <FileDown size={15} />
-            <span>{exporting ? (isKm ? '...' : '...') : (isKm ? 'ជាឯកសារ (PDF)' : 'PDF File')}</span>
+            <span>{exporting ? '...' : (isKm ? 'ជាឯកសារ (PDF)' : 'PDF File')}</span>
           </button>
         </div>
       </div>
 
-      {/* Printable / Capturable Receipt Section */}
       <div className="receipt-capture-area" ref={receiptRef}>
         <div className="tx-detail-card">
           <div className="receipt-brand-row">
@@ -541,12 +547,14 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
 
         <div className="tx-items-table-card">
           <h4 className="tx-items-title">{isKm ? 'បញ្ជីទំនិញ' : 'Items List'}</h4>
+          
           <div className="tx-table-head">
             <span>{isKm ? 'ទំនិញ' : 'Item'}</span>
             <span className="text-center">{isKm ? 'ចំនួន' : 'Qty'}</span>
             <span className="text-center">{isKm ? 'តម្លៃរាយ' : 'Price'}</span>
             <span className="text-right">{isKm ? 'សរុប' : 'Total'}</span>
           </div>
+
           {sale.items.map((item, idx) => {
             const unitPrice = resolveUnitPrice(item);
             const currency = resolveCurrency(item);
@@ -561,10 +569,24 @@ function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete 
               </div>
             );
           })}
+
+          {/* Aggregate Grand Total Row */}
+          <div className="tx-table-footer-row">
+            <div className="footer-title">
+              <strong>{isKm ? 'សរុបទឹកប្រាក់រួម' : 'Grand Total'}</strong>
+            </div>
+            <div className="text-center footer-qty">
+              <strong>{totalQty}</strong>
+            </div>
+            <div></div>
+            <div className="text-right footer-totals-col">
+              <div className="grand-usd">${totals.totalUSD.toFixed(2)}</div>
+              <div className="grand-khr">{Math.round(totals.totalKHR).toLocaleString()} KHR</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Standard Bottom Actions */}
       <div className="tx-action-row">
         <button className="tx-btn-edit" type="button" onClick={onEdit} disabled={isBusy || exporting}>
           {isKm ? 'កែប្រែ' : 'Edit'}

@@ -137,8 +137,7 @@ export const summarizeSaleTitle = (sale) => {
   const items = sale.items || [];
   if (!items.length) return 'General Sale';
   return items
-    .slice(0, 2)
-    .map((item) => `${item.description || item.product} x${Number(item.quantity || 0)}`)
+    .map((item) => `${item.description || item.product || 'Item'} x${Number(item.quantity || 0)}`)
     .join(', ');
 };
 

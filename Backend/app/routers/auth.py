@@ -4,6 +4,7 @@ import shutil
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -58,6 +59,15 @@ def register(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # 1. Prevent duplicate phone collision across accounts
+    if payload.phone_number:
+        phone_user = user_repo.find_user_by_phone_number(db, payload.phone_number)
+        if phone_user and phone_user.email != payload.email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This phone number is already registered with another account.",
+            )
+
     existing_user = user_repo.find_user_by_email(db, payload.email)
 
     if existing_user:
@@ -78,7 +88,15 @@ def register(
             code, hashed_code, expires_at = generate_verification_code()
             existing_user.email_verification_code = hashed_code
             existing_user.email_verification_expires = expires_at
-            user_repo.save_user(db, existing_user)
+
+            try:
+                user_repo.save_user(db, existing_user)
+            except IntegrityError:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This phone number is already registered with another account.",
+                )
 
             background_tasks.add_task(
                 send_verification_email, existing_user.email, code, existing_user.first_name
@@ -90,21 +108,36 @@ def register(
                 "data": {"requires_email_verification": True},
             }
 
-        user_repo.save_user(db, existing_user)
+        try:
+            user_repo.save_user(db, existing_user)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This phone number is already registered with another account.",
+            )
+
         return {
             "success": True,
             "message": "Account updated. You can sign in now.",
             "data": {"requires_email_verification": False},
         }
 
-    user = user_repo.create_user(
-        db,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        phone_number=payload.phone_number,
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-    )
+    try:
+        user = user_repo.create_user(
+            db,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            phone_number=payload.phone_number,
+            email=payload.email,
+            password_hash=hash_password(payload.password),
+        )
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this phone number or email already exists.",
+        )
 
     if settings.REQUIRE_EMAIL_VERIFICATION:
         code, hashed_code, expires_at = generate_verification_code()
@@ -279,7 +312,15 @@ def update_me(
     current_user.last_name = payload.last_name
     current_user.phone_number = payload.phone_number
     current_user.email = payload.email
-    saved_user = user_repo.save_user(db, current_user)
+
+    try:
+        saved_user = user_repo.save_user(db, current_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with these details already exists.",
+        )
 
     return {
         "success": True,
@@ -415,7 +456,6 @@ def request_forgot_current_password_otp(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Requires the user to type their Gmail, confirms it matches current_user.email, and sends an OTP."""
     if payload.email.strip().lower() != current_user.email.strip().lower():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -447,7 +487,6 @@ def reset_with_otp_authenticated(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Verifies OTP and updates password directly for the logged-in user."""
     now = datetime.now(timezone.utc)
     if not current_user.email_verification_expires or not current_user.email_verification_code:
         raise HTTPException(status_code=400, detail="No active verification code found.")
