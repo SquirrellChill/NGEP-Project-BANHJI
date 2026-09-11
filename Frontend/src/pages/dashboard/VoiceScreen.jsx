@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   AudioLines, 
   Check, 
-  Edit3, 
   Keyboard, 
   Pause, 
   Play, 
@@ -16,7 +15,6 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import EditItemModal from '../../components/dashboard/EditItemModal';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import TransactionSavedView from '../../components/dashboard/TransactionSavedView';
 import Waveform from '../../components/dashboard/Waveform';
@@ -67,7 +65,7 @@ const parsePositiveNumber = (value) => {
 };
 
 const voiceItemToDraftItem = (item, index) => normalizeReviewItem({
-  id: `voice-${Date.now()}-${index}`,
+  id: `voice-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`,
   description: item.description || item.product || item.item || '',
   quantity: item.quantity ?? 1,
   unit_price: item.unit_price ?? item.price ?? 0,
@@ -96,7 +94,6 @@ export default function VoiceScreen() {
 
   const [manualItem, setManualItem] = useState(emptyManualItem);
   const [manualErrors, setManualErrors] = useState({});
-  const [editingItem, setEditingItem] = useState(null);
   const [viewMode, setViewMode] = useState('entry');
   const [saving, setSaving] = useState(false);
   const [savedSaleId, setSavedSaleId] = useState(null);
@@ -117,7 +114,6 @@ export default function VoiceScreen() {
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
-  const voiceItemIdsRef = useRef([]);
 
   useEffect(() => {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ sale_date: saleDate, items: draftItems }));
@@ -142,6 +138,29 @@ export default function VoiceScreen() {
     return formatCurrencyTotals({ khr: original.KHR, usd: original.USD });
   }, [draftItems]);
 
+  // Handle direct inline typing updates in the draft table
+  const handleInlineItemChange = (id, field, value) => {
+    setDraftItems((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+
+        let nextValue = value;
+        if (field === 'quantity') {
+          nextValue = normalizeNumberInput(value);
+        } else if (field === 'unit_price') {
+          nextValue = normalizeNumberInput(value);
+        }
+
+        const updated = {
+          ...item,
+          [field]: nextValue,
+          ...(field === 'description' ? { product: nextValue } : {}),
+        };
+        return updated;
+      })
+    );
+  };
+
   const validateManualItem = () => {
     const next = {};
     const quantity = parsePositiveNumber(manualItem.quantity);
@@ -158,7 +177,7 @@ export default function VoiceScreen() {
     const result = validateManualItem();
     if (!result.valid) return;
     const item = normalizeReviewItem({
-      id: `manual-${Date.now()}`,
+      id: `manual-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       description: manualItem.description.trim(),
       product: manualItem.description.trim(),
       quantity: result.quantity,
@@ -249,13 +268,10 @@ export default function VoiceScreen() {
     startRecording(recordingPurpose);
   };
 
+  // Safely appends newly detected items without purging previously saved items
   const mergeVoiceRecordIntoDraft = (record) => {
-    const nextVoiceItems = (record?.items || []).map(voiceItemToDraftItem);
-    voiceItemIdsRef.current = nextVoiceItems.map((item) => item.id);
-    setDraftItems((current) => [
-      ...current.filter((item) => !voiceItemIdsRef.current.includes(item.id) && !String(item.id).startsWith('voice-')),
-      ...nextVoiceItems,
-    ]);
+    const incomingItems = (record?.items || []).map(voiceItemToDraftItem);
+    setDraftItems((current) => [...current, ...incomingItems]);
   };
 
   const handleVoiceResult = (result) => {
@@ -348,14 +364,8 @@ export default function VoiceScreen() {
     }
   };
 
-  const saveEditedItem = (updatedItem) => {
-    setDraftItems((current) => current.map((item) => (item.id === updatedItem.id ? normalizeReviewItem(updatedItem) : item)));
-    setEditingItem(null);
-  };
-
   const deleteItem = (id) => {
     setDraftItems((current) => current.filter((item) => item.id !== id));
-    setEditingItem(null);
   };
 
   const validateDraft = () => {
@@ -383,7 +393,6 @@ export default function VoiceScreen() {
       setSavedSaleId(response.data?.sale_id || response.data?.saleId || null);
       sessionStorage.removeItem(DRAFT_KEY);
 
-      // Keep local storage sales store synced
       const currentStored = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
       currentStored.unshift({
         ...payload,
@@ -394,7 +403,6 @@ export default function VoiceScreen() {
 
       setViewMode('saved');
     } catch (err) {
-      // Fallback local persistence if network unavailable
       const payload = saleToPayload(saleDate, draftItems);
       const currentStored = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
       const localId = 'sale_' + Date.now();
@@ -432,7 +440,7 @@ export default function VoiceScreen() {
 
   return (
     <MobileAppShell activeTab="add">
-      <div className="add-sale-wrapper font-kantumruy">
+      <div className="add-sale-wrapper font-kantomruy">
         {/* Header Title */}
         <div className="add-sale-header">
           <h1>{isKm ? 'បន្ថែមការលក់ថ្មី' : 'Add New Sale'}</h1>
@@ -496,7 +504,7 @@ export default function VoiceScreen() {
                     <label>{isKm ? 'ផលិតផល' : 'Product'}</label>
                     <input 
                       type="text" 
-                      placeholder={isKm ? 'ឈ្មោះទំនិញ (ឧ. បងអែម)' : 'Product name (e.g. Coffee)'} 
+                      placeholder={isKm ? 'ឈ្មោះទំនិញ (ឧ. កាហ្វេ)' : 'Product name (e.g. Coffee)'} 
                       value={manualItem.description}
                       onChange={(e) => updateManualField('description', e.target.value)}
                     />
@@ -572,7 +580,7 @@ export default function VoiceScreen() {
 
               <div className="voice-card-header">
                 <h2>{isKm ? 'កំពុងស្តាប់សំឡេងរបស់អ្នក...' : 'AI Voice Assistant'}</h2>
-                <p>{isKm ? 'សូមនិយាយទំនិញ និងចំនួន (ឧ. "បងអែមដប់ប្រាំបី")' : 'Speak naturally (e.g. "two coffees and one sandwich")'}</p>
+                <p>{isKm ? 'សូមនិយាយទំនិញ និងចំនួន (ឧ. "កាហ្វេពីរកែវ នំបុ័ងមួយ")' : 'Speak naturally (e.g. "two coffees and one sandwich")'}</p>
               </div>
 
               {/* Pulsing Mic with Waveform */}
@@ -671,7 +679,7 @@ export default function VoiceScreen() {
             </div>
           )}
 
-          {/* RIGHT: Live Draft Invoice Ledger */}
+          {/* RIGHT: Live Draft Invoice Ledger with Direct Inline Editing */}
           <div className="entry-card draft-card">
             <div>
               <div className="draft-header">
@@ -702,16 +710,55 @@ export default function VoiceScreen() {
 
                     return (
                       <div key={item.id} className="draft-table-row">
-                        <span className="item-title" onClick={() => setEditingItem(item)}>{item.description || item.product}</span>
-                        <span className="text-center">{item.quantity}</span>
-                        <span className="text-center">{formatCurrencyValue(uPrice, cur)}</span>
-                        <span className="text-right item-total">{formatCurrencyValue(lineTotal, cur)}</span>
+                        {/* 1. Direct Editable Product Name */}
+                        <div className="cell-input-wrap">
+                          <input
+                            type="text"
+                            className="draft-cell-input product-cell"
+                            value={item.description || item.product || ''}
+                            placeholder={isKm ? 'ឈ្មោះទំនិញ' : 'Item name'}
+                            onChange={(e) => handleInlineItemChange(item.id, 'description', e.target.value)}
+                          />
+                        </div>
+
+                        {/* 2. Direct Editable Quantity */}
+                        <div className="cell-input-wrap text-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="draft-cell-input qty-cell"
+                            value={item.quantity ?? ''}
+                            placeholder="1"
+                            onChange={(e) => handleInlineItemChange(item.id, 'quantity', e.target.value)}
+                          />
+                        </div>
+
+                        {/* 3. Direct Editable Unit Price */}
+                        <div className="cell-input-wrap text-center price-wrap">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="draft-cell-input price-cell"
+                            value={item.unit_price ?? ''}
+                            placeholder="0"
+                            onChange={(e) => handleInlineItemChange(item.id, 'unit_price', e.target.value)}
+                          />
+                          <span className="cell-currency-suffix">{cur}</span>
+                        </div>
+
+                        {/* 4. Auto-calculated Total */}
+                        <span className="text-right item-total">
+                          {formatCurrencyValue(lineTotal, cur)}
+                        </span>
+
+                        {/* 5. Delete Button */}
                         <button 
                           type="button" 
                           className="draft-delete-btn"
+                          title={isKm ? 'លុប' : 'Delete item'}
                           onClick={() => deleteItem(item.id)}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     );
@@ -746,14 +793,6 @@ export default function VoiceScreen() {
           </div>
         </div>
       </div>
-
-      {/* Edit Item Modal */}
-      <EditItemModal 
-        item={editingItem} 
-        onClose={() => setEditingItem(null)} 
-        onDelete={deleteItem} 
-        onSave={saveEditedItem} 
-      />
     </MobileAppShell>
   );
 }

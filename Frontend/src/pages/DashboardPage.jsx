@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Home, 
-  BarChart3,
+  BarChart3, 
   Receipt, 
   User, 
   Edit3, 
@@ -11,10 +11,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { getSales } from '../services/transactionService';
+import { calculateEquivalentTotals, APPLICATION_EXCHANGE_RATE } from '../utils/currency';
+import { normalizeSaleFromApi, summarizeSaleTitle } from '../utils/sales';
 import { buildDashboardProfile } from '../utils/profile';
 import './DashboardPage.css';
 
-const EXCHANGE_RATE = 4050; // 1 USD = 4,050 KHR
+const EXCHANGE_RATE = APPLICATION_EXCHANGE_RATE || 4050; // 1 USD = 4,050 KHR
 
 const profileFallback = {
   name: 'Seller',
@@ -25,18 +28,6 @@ const profileFallback = {
   email: '',
   phone: '',
 };
-
-// Safe helper to read sales from standard storage keys
-function getStoredSales() {
-  try {
-    const raw = localStorage.getItem('kotchomnol_sales') || localStorage.getItem('sales') || '[]';
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.error('Failed to parse sales from storage:', err);
-    return [];
-  }
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -51,7 +42,7 @@ export default function DashboardPage() {
   const fullDisplayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.name || 'Seller';
   const initialLetter = (firstName.charAt(0) || 'U').toUpperCase();
 
-  // Dynamic live date: Updates automatically every day
+  // Dynamic live date
   const today = new Date();
   const formattedToday = today.toLocaleDateString(isKm ? 'km-KH' : 'en-US', {
     month: 'short',
@@ -59,52 +50,81 @@ export default function DashboardPage() {
     year: 'numeric'
   });
 
-  // Calculate Today's Metrics at runtime
-  const { todayTotalUSD, todayTotalKHR, todaySalesCount, recentSales } = useMemo(() => {
-    const allSales = getStoredSales();
+  // State to hold live sales data
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-    const todayDateString = today.toDateString();
-
-    // Filter strictly for sales made today
-    const todaysSales = allSales.filter(item => {
-      const saleDate = item.createdAt ? new Date(item.createdAt) : (item.date ? new Date(item.date) : null);
-      return saleDate && saleDate.toDateString() === todayDateString;
-    });
-
-    // Sum totals for today
-    let totalUSD = 0;
-    let totalKHR = 0;
-
-    todaysSales.forEach(sale => {
-      if (sale.currency === 'USD') {
-        const usd = Number(sale.totalAmount || sale.amount || 0);
-        totalUSD += usd;
-        totalKHR += usd * EXCHANGE_RATE;
-      } else if (sale.currency === 'KHR') {
-        const khr = Number(sale.totalAmount || sale.amount || 0);
-        totalKHR += khr;
-        totalUSD += khr / EXCHANGE_RATE;
-      } else {
-        // Default fallback if currency field is missing or generic USD
-        const val = Number(sale.totalAmount || sale.amount || 0);
-        totalUSD += val;
-        totalKHR += val * EXCHANGE_RATE;
+  // Fetch real-time sales from backend
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLiveSales = async () => {
+      setLoading(true);
+      try {
+        const res = await getSales({ limit: 100 });
+        if (isMounted && res?.data) {
+          setSales(res.data.map(normalizeSaleFromApi));
+        }
+      } catch (err) {
+        console.error('Failed to load live sales for dashboard:', err);
+        try {
+          const cached = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
+          if (isMounted) setSales(cached.map(normalizeSaleFromApi));
+        } catch {
+          // ignore cache parse errors
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
+    };
+
+    fetchLiveSales();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Calculate Today's Metrics and Recent Sales
+  const { todayTotalUSD, todayTotalKHR, todaySalesCount, recentSales } = useMemo(() => {
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Filter sales strictly made today
+    const todaysSales = sales.filter((item) => {
+      const saleDate = new Date(item.date || item.createdAt || Date.now());
+      return saleDate >= startOfToday;
     });
 
-    // Sort recent sales descending
-    const sorted = [...allSales].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+    // Sum raw amounts for today
+    let rawUsd = 0;
+    let rawKhr = 0;
+    todaysSales.forEach((sale) => {
+      rawUsd += Number(sale.totalUSD || 0);
+      rawKhr += Number(sale.totalKHR || 0);
+    });
+
+    // Calculate unified equivalent totals
+    const unified = calculateEquivalentTotals({
+      usd: rawUsd,
+      khr: rawKhr,
+      exchangeRate: EXCHANGE_RATE,
+    });
+
+    // Sort recent sales descending (newest first)
+    const sorted = [...sales].sort((a, b) => {
+      const dateA = new Date(a.date || a.createdAt || 0);
+      const dateB = new Date(b.date || b.createdAt || 0);
+      return dateB - dateA;
+    });
 
     return {
-      todayTotalUSD: totalUSD,
-      todayTotalKHR: Math.round(totalKHR),
+      todayTotalUSD: unified.totalUSD,
+      todayTotalKHR: unified.totalKHR,
       todaySalesCount: todaysSales.length,
-      recentSales: sorted.slice(0, 5) // Show top 5 recent sales
+      recentSales: sorted.slice(0, 5),
     };
-  }, [today]);
+  }, [sales, today]);
 
   return (
-    <div className="dash-container font-kantumruy">
+    <div className="dash-container font-kantomruy">
       {/* Desktop Sidebar / Mobile Bottom Nav */}
       <aside className="dash-sidebar">
         <div>
@@ -124,7 +144,11 @@ export default function DashboardPage() {
               <span>{isKm ? 'ផ្ទាំងគ្រប់គ្រង' : 'Dashboard'}</span>
             </Link>
 
-            <Link to="/dashboard/voice" className="dash-nav-link dash-nav-add-sale">
+            <Link 
+              to="/dashboard/voice" 
+              state={{ entryMode: 'voice' }}
+              className="dash-nav-link dash-nav-add-sale"
+            >
               <span className="add-sale-icon-wrap">
                 <Mic size={15} strokeWidth={2.4} />
               </span>
@@ -173,7 +197,6 @@ export default function DashboardPage() {
                   <span className="dash-rev-label">
                     {isKm ? 'ចំណូលថ្ងៃនេះ' : "Today's Revenue"}
                   </span>
-                  {/* Dynamic Date badge */}
                   <span className="dash-rev-date">{formattedToday}</span>
                 </div>
 
@@ -184,13 +207,17 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="dash-amt-label">{isKm ? 'សរុប (KHR)' : 'Total (KHR)'}</span>
-                    <span className="dash-khr-val">{todayTotalKHR.toLocaleString()} KHR</span>
+                    <span className="dash-khr-val">{Math.round(todayTotalKHR).toLocaleString()} KHR</span>
                   </div>
                 </div>
               </div>
 
               <div className="dash-rev-footer">
-                <span>{isKm ? `អត្រាប្តូរប្រាក់: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR` : `Exchange rate: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR`}</span>
+                <span>
+                  {isKm
+                    ? `អត្រាប្តូរប្រាក់: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR`
+                    : `Exchange rate: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR`}
+                </span>
                 <span className="dash-orders-badge">
                   {isKm ? `ចំនួនការលក់: ${todaySalesCount}` : `Sales count: ${todaySalesCount}`}
                 </span>
@@ -206,7 +233,7 @@ export default function DashboardPage() {
                 <button 
                   type="button" 
                   className="dash-action-btn manual"
-                  onClick={() => navigate('/dashboard/voice?manual=true')}
+                  onClick={() => navigate('/dashboard/voice', { state: { entryMode: 'manual' } })}
                 >
                   <span className="dash-action-icon"><Edit3 size={18} /></span>
                   <div>
@@ -222,7 +249,7 @@ export default function DashboardPage() {
                 <button 
                   type="button" 
                   className="dash-action-btn voice"
-                  onClick={() => navigate('/dashboard/voice')}
+                  onClick={() => navigate('/dashboard/voice', { state: { entryMode: 'voice' } })}
                 >
                   <span className="dash-action-icon"><Mic size={18} /></span>
                   <div>
@@ -250,27 +277,40 @@ export default function DashboardPage() {
             </div>
 
             <div className="dash-tx-list">
-              {recentSales.length === 0 ? (
+              {loading && (
+                <div style={{ padding: '20px 0', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
+                  {isKm ? 'កំពុងផ្ទុកទិន្នន័យ...' : 'Loading transactions...'}
+                </div>
+              )}
+              {!loading && recentSales.length === 0 ? (
                 <div style={{ padding: '20px 0', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
                   {isKm ? 'មិនទាន់មានការលក់នៅឡើយទេ។' : 'No sales recorded yet.'}
                 </div>
               ) : (
-                recentSales.map((sale, idx) => {
-                  const saleUsd = Number(sale.totalAmount || sale.amount || 0);
-                  const saleKhr = sale.amountKHR || Math.round(saleUsd * EXCHANGE_RATE);
-                  const itemName = sale.items?.[0]?.name || sale.name || (isKm ? 'ការលក់ទូទៅ' : 'General Sale');
-                  const itemCount = sale.items?.length > 1 ? ` +${sale.items.length - 1}` : '';
+                recentSales.map((sale) => {
+                  const saleTotals = calculateEquivalentTotals({
+                    usd: sale.totalUSD,
+                    khr: sale.totalKHR,
+                    exchangeRate: EXCHANGE_RATE,
+                  });
+
+                  const itemName = summarizeSaleTitle(sale);
 
                   return (
-                    <div key={sale.id || idx} className="dash-tx-item">
+                    <div 
+                      key={sale.saleId || sale.id} 
+                      className="dash-tx-item"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate('/dashboard/transactions', { state: { saleId: sale.saleId || sale.id } })}
+                    >
                       <div className="dash-tx-left">
                         <div className="dash-tx-icon">
                           <ShoppingCart size={18} />
                         </div>
                         <div>
-                          <div className="dash-tx-name">{itemName}{itemCount}</div>
+                          <div className="dash-tx-name">{itemName}</div>
                           <div className="dash-tx-meta">
-                            {new Date(sale.createdAt || sale.date || Date.now()).toLocaleDateString(isKm ? 'km-KH' : 'en-US', {
+                            {new Date(sale.date || sale.createdAt || Date.now()).toLocaleDateString(isKm ? 'km-KH' : 'en-US', {
                               month: 'short',
                               day: 'numeric'
                             })} • {isKm ? 'ការលក់' : 'Sale'}
@@ -278,8 +318,8 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="dash-tx-right">
-                        <div className="dash-tx-usd">${saleUsd.toFixed(2)}</div>
-                        <div className="dash-tx-khr">{saleKhr.toLocaleString()} KHR</div>
+                        <div className="dash-tx-usd">${saleTotals.totalUSD.toFixed(2)}</div>
+                        <div className="dash-tx-khr">{Math.round(saleTotals.totalKHR).toLocaleString()} KHR</div>
                       </div>
                     </div>
                   );

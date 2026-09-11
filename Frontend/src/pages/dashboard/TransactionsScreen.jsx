@@ -1,13 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, Trash2, ArrowLeft, Search, Calendar, FileText } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { 
+  Eye, 
+  Trash2, 
+  ArrowLeft, 
+  Search, 
+  Calendar, 
+  FileText, 
+  Download, 
+  Image as ImageIcon, 
+  FileDown 
+} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import EditItemModal from '../../components/dashboard/EditItemModal';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import ReviewSalePanel from '../../components/dashboard/ReviewSalePanel';
 import TransactionSavedView from '../../components/dashboard/TransactionSavedView';
 import { useLanguage } from '../../context/LanguageContext';
 import { createSale, deleteSale, getSale, getSales, updateSale } from '../../services/transactionService';
-import { APPLICATION_EXCHANGE_RATE, formatCurrencyTotals, formatCurrencyValue } from '../../utils/currency';
+import {
+  APPLICATION_EXCHANGE_RATE,
+  calculateEquivalentTotals,
+  formatCurrencyTotals,
+  formatCurrencyValue,
+} from '../../utils/currency';
 import {
   firstDefined,
   formatDisplayDate,
@@ -125,15 +142,21 @@ export default function TransactionsScreen() {
     });
   }, [sales, timeFilter, searchQuery]);
 
-  // Aggregate totals for the active filtered period
+  // Unified aggregated totals for the active filtered period
   const { totalUSD, totalKHR } = useMemo(() => {
-    let usd = 0;
-    let khr = 0;
+    let rawUsd = 0;
+    let rawKhr = 0;
+
     filteredSales.forEach((s) => {
-      usd += Number(s.totalUSD || 0);
-      khr += Number(s.totalKHR || (s.totalUSD ? s.totalUSD * exchangeRate : 0));
+      rawUsd += Number(s.totalUSD || 0);
+      rawKhr += Number(s.totalKHR || 0);
     });
-    return { totalUSD: usd, totalKHR: Math.round(khr) };
+
+    return calculateEquivalentTotals({
+      usd: rawUsd,
+      khr: rawKhr,
+      exchangeRate,
+    });
   }, [filteredSales, exchangeRate]);
 
   const handleDeleteItem = (id) => {
@@ -301,7 +324,7 @@ export default function TransactionsScreen() {
               </div>
               <div>
                 <span className="summary-currency-label">KHR</span>
-                <span className="summary-khr-value">{totalKHR.toLocaleString()} KHR</span>
+                <span className="summary-khr-value">{Math.round(totalKHR).toLocaleString()} KHR</span>
               </div>
             </div>
           </div>
@@ -367,8 +390,11 @@ export default function TransactionsScreen() {
               </div>
             )}
             {filteredSales.map((sale) => {
-              const saleUsd = Number(sale.totalUSD || 0);
-              const saleKhr = Number(sale.totalKHR || saleUsd * exchangeRate);
+              const rowTotals = calculateEquivalentTotals({
+                usd: sale.totalUSD,
+                khr: sale.totalKHR,
+                exchangeRate,
+              });
               const formattedDate = formatDisplayDate(sale.date, language);
 
               return (
@@ -385,9 +411,9 @@ export default function TransactionsScreen() {
                     </span>
                   </div>
                   <div className="record-card-right">
-                    <div className="record-usd-price">${saleUsd.toFixed(2)}</div>
+                    <div className="record-usd-price">${rowTotals.totalUSD.toFixed(2)}</div>
                     <div className="record-khr-price">
-                      {Math.round(saleKhr).toLocaleString()} KHR
+                      {Math.round(rowTotals.totalKHR).toLocaleString()} KHR
                     </div>
                     <button className="view-detail-link" type="button">
                       <Eye size={14} /> {isKm ? 'មើល' : 'View'}
@@ -404,56 +430,146 @@ export default function TransactionsScreen() {
 }
 
 function TransactionDetail({ sale, exchangeRate, isBusy, isKm, onEdit, onDelete }) {
-  const totals = formatCurrencyTotals({ khr: sale.totalKHR, usd: sale.totalUSD, exchangeRate });
+  const receiptRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+
+  // Normalized unified equivalent totals
+  const totals = calculateEquivalentTotals({
+    usd: sale.totalUSD,
+    khr: sale.totalKHR,
+    exchangeRate,
+  });
+
+  const formattedDate = sale.date ? new Date(sale.date).toLocaleDateString() : 'Today';
+
+  // Export as PNG Image
+  const handleDownloadImage = async () => {
+    if (!receiptRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const link = document.createElement('a');
+      link.download = `receipt_${sale.saleId || 'sale'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Failed to export image:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export as PDF Document
+  const handleDownloadPDF = async () => {
+    if (!receiptRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`receipt_${sale.saleId || 'sale'}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <section className="tx-detail-container">
-      <div className="tx-detail-card">
-        <span className="tx-detail-date">
-          {sale.date ? new Date(sale.date).toLocaleDateString() : 'Today'}
+      {/* Export Bar Actions */}
+      <div className="export-action-bar">
+        <span className="export-hint-text">
+          {isKm ? 'ទាញយកវិក្កយបត្រ៖' : 'Export Receipt:'}
         </span>
-        <h3>{summarizeSaleTitle(sale)}</h3>
-        <div className="tx-detail-totals">
-          <div>
-            <label>USD</label>
-            <strong>{totals.usdLabel}</strong>
-          </div>
-          <div>
-            <label>KHR</label>
-            <strong>{totals.khrLabel}</strong>
-          </div>
+        <div className="export-buttons-group">
+          <button 
+            type="button" 
+            className="export-btn image-btn" 
+            onClick={handleDownloadImage}
+            disabled={exporting}
+          >
+            <ImageIcon size={15} />
+            <span>{exporting ? (isKm ? '...' : '...') : (isKm ? 'ជារូបភាព (PNG)' : 'Image (PNG)')}</span>
+          </button>
+          <button 
+            type="button" 
+            className="export-btn pdf-btn" 
+            onClick={handleDownloadPDF}
+            disabled={exporting}
+          >
+            <FileDown size={15} />
+            <span>{exporting ? (isKm ? '...' : '...') : (isKm ? 'ជាឯកសារ (PDF)' : 'PDF File')}</span>
+          </button>
         </div>
       </div>
 
-      <div className="tx-items-table-card">
-        <h4 className="tx-items-title">{isKm ? 'បញ្ជីទំនិញ' : 'Items List'}</h4>
-        <div className="tx-table-head">
-          <span>{isKm ? 'ទំនិញ' : 'Item'}</span>
-          <span>{isKm ? 'ចំនួន' : 'Qty'}</span>
-          <span>{isKm ? 'តម្លៃរាយ' : 'Price'}</span>
-          <span>{isKm ? 'សរុប' : 'Total'}</span>
-        </div>
-        {sale.items.map((item, idx) => {
-          const unitPrice = resolveUnitPrice(item);
-          const currency = resolveCurrency(item);
-          const total = Number(firstDefined(item.amount, Number(item.quantity || 0) * unitPrice, 0));
+      {/* Printable / Capturable Receipt Section */}
+      <div className="receipt-capture-area" ref={receiptRef}>
+        <div className="tx-detail-card">
+          <div className="receipt-brand-row">
+            <span className="receipt-badge">KOTCHOMNOL RECEIPT</span>
+            <span className="tx-detail-date">{formattedDate}</span>
+          </div>
 
-          return (
-            <div className="tx-table-row" key={item.id || idx}>
-              <span className="item-name">{item.product || item.description}</span>
-              <span>{item.quantity}</span>
-              <span>{formatCurrencyValue(unitPrice, currency)}</span>
-              <strong>{formatCurrencyValue(total, currency)}</strong>
+          <h3>{summarizeSaleTitle(sale)}</h3>
+          
+          <div className="tx-detail-totals">
+            <div>
+              <label>USD</label>
+              <strong>${totals.totalUSD.toFixed(2)}</strong>
             </div>
-          );
-        })}
+            <div>
+              <label>KHR</label>
+              <strong>{Math.round(totals.totalKHR).toLocaleString()} KHR</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="tx-items-table-card">
+          <h4 className="tx-items-title">{isKm ? 'បញ្ជីទំនិញ' : 'Items List'}</h4>
+          <div className="tx-table-head">
+            <span>{isKm ? 'ទំនិញ' : 'Item'}</span>
+            <span className="text-center">{isKm ? 'ចំនួន' : 'Qty'}</span>
+            <span className="text-center">{isKm ? 'តម្លៃរាយ' : 'Price'}</span>
+            <span className="text-right">{isKm ? 'សរុប' : 'Total'}</span>
+          </div>
+          {sale.items.map((item, idx) => {
+            const unitPrice = resolveUnitPrice(item);
+            const currency = resolveCurrency(item);
+            const total = Number(firstDefined(item.amount, Number(item.quantity || 0) * unitPrice, 0));
+
+            return (
+              <div className="tx-table-row" key={item.id || idx}>
+                <span className="item-name">{item.product || item.description}</span>
+                <span className="text-center">{item.quantity}</span>
+                <span className="text-center">{formatCurrencyValue(unitPrice, currency)}</span>
+                <strong className="text-right">{formatCurrencyValue(total, currency)}</strong>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
+      {/* Standard Bottom Actions */}
       <div className="tx-action-row">
-        <button className="tx-btn-edit" type="button" onClick={onEdit} disabled={isBusy}>
+        <button className="tx-btn-edit" type="button" onClick={onEdit} disabled={isBusy || exporting}>
           {isKm ? 'កែប្រែ' : 'Edit'}
         </button>
-        <button className="tx-btn-delete" type="button" onClick={onDelete} disabled={isBusy}>
+        <button className="tx-btn-delete" type="button" onClick={onDelete} disabled={isBusy || exporting}>
           <Trash2 size={16} /> {isKm ? 'លុប' : 'Delete'}
         </button>
       </div>

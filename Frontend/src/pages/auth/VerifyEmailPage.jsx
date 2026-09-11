@@ -30,13 +30,13 @@ export default function VerifyEmailPage() {
     setLoading(true);
 
     try {
-      await verifyEmail({ email, code });
+      await verifyEmail({ email, code: code.trim() });
       navigate('/login');
     } catch (err) {
       const message = getErrorMessage(err);
       const lower = String(message).toLowerCase();
       if (lower.includes('code') || lower.includes('verification') || lower.includes('invalid')) {
-        setFieldErrors({ code: t('invalidVerificationCode') });
+        setFieldErrors({ code: t('invalidVerificationCode') || 'Invalid verification code.' });
       } else {
         setError(message);
       }
@@ -91,6 +91,8 @@ export default function VerifyEmailPage() {
                   <input
                     id="email"
                     type="email"
+                    placeholder="name@example.com"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -98,13 +100,28 @@ export default function VerifyEmailPage() {
                     }}
                     required
                   />
-                  {fieldErrors.email && <span style={{ color: '#ef4444', fontSize: '11px' }}>{fieldErrors.email}</span>}
+                  {fieldErrors.email && (
+                    <span style={{ color: '#ef4444', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                      {fieldErrors.email}
+                    </span>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="code">{t('verificationCode') || 'Verification Code'}</label>
                   <input
                     id="code"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    placeholder="••••••"
+                    style={{
+                      letterSpacing: '0.25em',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      fontSize: '16px',
+                    }}
                     value={code}
                     onChange={(e) => {
                       setCode(e.target.value);
@@ -112,7 +129,11 @@ export default function VerifyEmailPage() {
                     }}
                     required
                   />
-                  {fieldErrors.code && <span style={{ color: '#ef4444', fontSize: '11px' }}>{fieldErrors.code}</span>}
+                  {fieldErrors.code && (
+                    <span style={{ color: '#ef4444', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                      {fieldErrors.code}
+                    </span>
+                  )}
                 </div>
 
                 <button type="submit" disabled={loading}>

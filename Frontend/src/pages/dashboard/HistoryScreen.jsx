@@ -1,35 +1,24 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   BarChart3, 
-  ArrowLeft, 
   TrendingUp, 
   PieChart, 
   Package, 
-  Calendar, 
   ShoppingCart, 
-  Eye 
+  DollarSign, 
+  Coins, 
+  Award 
 } from 'lucide-react';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { buildDashboardProfile } from '../../utils/profile';
-import { APPLICATION_EXCHANGE_RATE } from '../../utils/currency';
-import { summarizeSaleTitle } from '../../utils/sales';
+import { getSales } from '../../services/transactionService';
+import { APPLICATION_EXCHANGE_RATE, calculateEquivalentTotals } from '../../utils/currency';
+import { normalizeSaleFromApi, resolveUnitPrice } from '../../utils/sales';
 import './HistoryScreen.css';
 
 const EXCHANGE_RATE = APPLICATION_EXCHANGE_RATE || 4050;
-
-function getStoredSales() {
-  try {
-    const raw = localStorage.getItem('kotchomnol_sales') || localStorage.getItem('sales') || '[]';
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.error('Failed to parse sales:', err);
-    return [];
-  }
-}
 
 export default function HistoryScreen() {
   const navigate = useNavigate();
@@ -37,29 +26,58 @@ export default function HistoryScreen() {
   const { language } = useLanguage();
   const isKm = language !== 'en';
 
-  const profile = buildDashboardProfile(user, { firstName: 'Seller', name: 'Seller' });
-  const firstName = profile.firstName || profile.name?.split(' ')[0] || (isKm ? 'អ្នកលក់' : 'Seller');
-
   const [period, setPeriod] = useState('today'); // 'today' | 'week' | 'month'
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const today = new Date();
-  const formattedToday = today.toLocaleDateString(isKm ? 'km-KH' : 'en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  // Fetch real-time sales directly from backend
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSales = async () => {
+      setLoading(true);
+      try {
+        const res = await getSales({ limit: 100 });
+        if (isMounted && res?.data) {
+          setSales(res.data.map(normalizeSaleFromApi));
+        }
+      } catch (err) {
+        console.error('Failed to load history sales:', err);
+        try {
+          const cached = JSON.parse(localStorage.getItem('kotchomnol_sales') || '[]');
+          if (isMounted) setSales(cached.map(normalizeSaleFromApi));
+        } catch {
+          // ignore cache errors
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-  // Calculate live filtered analytics from stored sales
-  const { filteredSales, totalUSD, totalKHR, salesCount, productBreakdown, weeklyBars } = useMemo(() => {
-    const sales = getStoredSales();
+    fetchSales();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Compute analytics dynamically based on active period
+  const { 
+    totalUSD, 
+    totalKHR, 
+    salesCount, 
+    totalProductsSold, 
+    productBreakdown, 
+    weeklyBars 
+  } = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const startOfWeek = new Date(startOfToday);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const dayOfWeek = (startOfWeek.getDay() + 6) % 7; // Monday = 0
+    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
 
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Filter sales according to period
     const filtered = sales.filter((item) => {
       const d = new Date(item.date || item.createdAt || Date.now());
       if (period === 'today') return d >= startOfToday;
@@ -68,63 +86,100 @@ export default function HistoryScreen() {
       return true;
     });
 
-    let sumUSD = 0;
-    let sumKHR = 0;
+    let rawUsd = 0;
+    let rawKhr = 0;
+    let productsCount = 0;
     const itemMap = {};
 
     filtered.forEach((sale) => {
-      const usd = Number(sale.totalUSD || sale.totalAmount || sale.amount || 0);
-      const khr = Number(sale.totalKHR || (usd ? usd * EXCHANGE_RATE : 0));
-      sumUSD += usd;
-      sumKHR += khr;
+      rawUsd += Number(sale.totalUSD || 0);
+      rawKhr += Number(sale.totalKHR || 0);
 
       if (Array.isArray(sale.items)) {
         sale.items.forEach((it) => {
           const name = it.product || it.description || (isKm ? 'ទំនិញទូទៅ' : 'General Item');
           const qty = Number(it.quantity || 1);
-          const itTotal = Number(it.amount || (qty * (it.unitPrice || 0)) || 0);
-          if (!itemMap[name]) itemMap[name] = { name, qty: 0, totalUSD: 0 };
+          productsCount += qty;
+
+          const unitPrice = resolveUnitPrice(it);
+          const currency = it.currency || (it.unitPriceKHR || it.totalKHR ? 'KHR' : 'USD');
+          let amountUSD = 0;
+          let amountKHR = 0;
+
+          if (currency === 'USD') {
+            amountUSD = it.amount ? Number(it.amount) : qty * unitPrice;
+            amountKHR = amountUSD * EXCHANGE_RATE;
+          } else {
+            amountKHR = it.amount ? Number(it.amount) : qty * unitPrice;
+            amountUSD = amountKHR / EXCHANGE_RATE;
+          }
+
+          if (!itemMap[name]) {
+            itemMap[name] = { name, qty: 0, totalUSD: 0, totalKHR: 0 };
+          }
           itemMap[name].qty += qty;
-          itemMap[name].totalUSD += itTotal;
+          itemMap[name].totalUSD += amountUSD;
+          itemMap[name].totalKHR += amountKHR;
         });
       }
     });
 
-    // 7-day weekly bar generation
-    const days = [
-      isKm ? 'ច័ន្ទ' : 'Mon',
-      isKm ? 'អង្គារ' : 'Tue',
-      isKm ? 'ពុធ' : 'Wed',
-      isKm ? 'ព្រហ' : 'Thu',
-      isKm ? 'សុក្រ' : 'Fri',
-      isKm ? 'សៅរ៍' : 'Sat',
-      isKm ? 'អាទិត្យ' : 'Sun'
-    ];
-    const weeklyData = [0, 0, 0, 0, 0, 0, 0];
-    sales.forEach((s) => {
-      const d = new Date(s.date || s.createdAt || Date.now());
-      const dayIndex = (d.getDay() + 6) % 7; // Monday = 0
-      weeklyData[dayIndex] += Number(s.totalUSD || s.totalAmount || 0);
+    // Unify totals via standard exchange rate
+    const unified = calculateEquivalentTotals({
+      usd: rawUsd,
+      khr: rawKhr,
+      exchangeRate: EXCHANGE_RATE,
     });
 
-    const maxVal = Math.max(...weeklyData, 10);
-    const bars = days.map((day, idx) => ({
-      label: day,
-      value: weeklyData[idx],
-      percent: Math.min(100, Math.round((weeklyData[idx] / maxVal) * 100))
+    // 7-day Weekly Trend (Mon - Sun of current week)
+    const days = [
+      { label: isKm ? 'ច័ន្ទ' : 'Mon', index: 0 },
+      { label: isKm ? 'អង្គារ' : 'Tue', index: 1 },
+      { label: isKm ? 'ពុធ' : 'Wed', index: 2 },
+      { label: isKm ? 'ព្រហ' : 'Thu', index: 3 },
+      { label: isKm ? 'សុក្រ' : 'Fri', index: 4 },
+      { label: isKm ? 'សៅរ៍' : 'Sat', index: 5 },
+      { label: isKm ? 'អាទិត្យ' : 'Sun', index: 6 }
+    ];
+
+    const weeklyAmounts = [0, 0, 0, 0, 0, 0, 0];
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+    sales.forEach((s) => {
+      const d = new Date(s.date || s.createdAt || Date.now());
+      if (d >= startOfWeek && d < endOfWeek) {
+        const dayIdx = (d.getDay() + 6) % 7;
+        const sUsd = Number(s.totalUSD || 0);
+        const sKhr = Number(s.totalKHR || 0);
+        weeklyAmounts[dayIdx] += sUsd + (sKhr / EXCHANGE_RATE);
+      }
+    });
+
+    const maxVal = Math.max(...weeklyAmounts, 1);
+    const bars = days.map((d) => ({
+      label: d.label,
+      value: weeklyAmounts[d.index],
+      percent: Math.max(8, Math.round((weeklyAmounts[d.index] / maxVal) * 100))
     }));
 
-    const products = Object.values(itemMap).sort((a, b) => b.totalUSD - a.totalUSD);
+    // Primary ranking by volume (quantity); Secondary ranking by revenue
+    const sortedProducts = Object.values(itemMap).sort((a, b) => {
+      if (b.qty !== a.qty) {
+        return b.qty - a.qty;
+      }
+      return b.totalUSD - a.totalUSD;
+    });
 
     return {
-      filteredSales: filtered,
-      totalUSD: sumUSD,
-      totalKHR: Math.round(sumKHR),
+      totalUSD: unified.totalUSD,
+      totalKHR: unified.totalKHR,
       salesCount: filtered.length,
-      productBreakdown: products,
+      totalProductsSold: productsCount,
+      productBreakdown: sortedProducts,
       weeklyBars: bars
     };
-  }, [period, isKm]);
+  }, [sales, period, isKm]);
 
   return (
     <MobileAppShell activeTab="history">
@@ -136,7 +191,7 @@ export default function HistoryScreen() {
               {isKm ? 'ផ្ទាំងគ្រប់គ្រង & ការវិភាគ' : 'Dashboard & Analytics'}
             </h1>
             <p className="analytics-sub">
-              {isKm ? 'នេះជាសង្ខេបអាជីវកម្ម និងក្រាហ្វវិភាគទិន្នន័យរបស់អ្នក' : 'Here is your real-time business performance and sales analytics.'}
+              {isKm ? 'នេះជាសង្ខេបអាជីវកម្ម និងក្រាហ្វវិភាគទិន្នន័យជាក់ស្តែងរបស់អ្នក' : 'Here is your real-time business performance and sales analytics.'}
             </p>
           </div>
         </div>
@@ -166,56 +221,45 @@ export default function HistoryScreen() {
           </button>
         </div>
 
-        {/* Top Metric Cards */}
-        <div className="analytics-metrics-grid">
-          {/* Revenue Card */}
-          <div className="analytics-revenue-card">
-            <div className="rev-header">
-              <span className="rev-header-label">
-                {isKm ? 'ចំណូលសរុបតាមការជ្រើសរើស' : 'Filtered Revenue'}
-              </span>
-              <span className="rev-badge">{formattedToday}</span>
+        {/* 4-Column Stat Cards */}
+        <div className="analytics-four-grid">
+          <div className="stat-tile-card">
+            <div className="stat-icon-wrap violet">
+              <Package size={22} />
             </div>
-
-            <div className="rev-amount-block">
-              <div>
-                <span className="amt-sub">USD</span>
-                <div className="amt-usd">${totalUSD.toFixed(2)}</div>
-              </div>
-              <div>
-                <span className="amt-sub">KHR</span>
-                <div className="amt-khr">{totalKHR.toLocaleString()} KHR</div>
-              </div>
-            </div>
-
-            <div className="rev-footer-note">
-              <span>{isKm ? `អត្រាប្តូរប្រាក់: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR` : `Exchange Rate: 1 USD = ${EXCHANGE_RATE.toLocaleString()} KHR`}</span>
-              <span className="rev-count-chip">
-                {isKm ? `ចំនួនលក់: ${salesCount}` : `Sales count: ${salesCount}`}
-              </span>
+            <div>
+              <span className="stat-tile-label">{isKm ? 'មុខទំនិញលក់បាន' : 'Products Sold'}</span>
+              <h3 className="stat-tile-val">{totalProductsSold} {isKm ? 'ឯកតា' : 'items'}</h3>
             </div>
           </div>
 
-          {/* Quick Stat Tiles */}
-          <div className="analytics-stat-stack">
-            <div className="stat-tile">
-              <div className="stat-icon-wrap violet">
-                <Package size={22} />
-              </div>
-              <div>
-                <span className="stat-tile-label">{isKm ? 'មុខទំនិញលក់បាន' : 'Products Sold'}</span>
-                <h3 className="stat-tile-val">{productBreakdown.reduce((acc, it) => acc + it.qty, 0)} {isKm ? 'ឯកតា' : 'items'}</h3>
-              </div>
+          <div className="stat-tile-card">
+            <div className="stat-icon-wrap indigo">
+              <ShoppingCart size={22} />
             </div>
+            <div>
+              <span className="stat-tile-label">{isKm ? 'ចំនួនប្រតិបត្តិការ' : 'Transactions'}</span>
+              <h3 className="stat-tile-val">{salesCount} {isKm ? 'លើក' : 'records'}</h3>
+            </div>
+          </div>
 
-            <div className="stat-tile">
-              <div className="stat-icon-wrap indigo">
-                <ShoppingCart size={22} />
-              </div>
-              <div>
-                <span className="stat-tile-label">{isKm ? 'ចំនួនប្រតិបត្តិការ' : 'Transactions'}</span>
-                <h3 className="stat-tile-val">{salesCount} {isKm ? 'លើក' : 'records'}</h3>
-              </div>
+          <div className="stat-tile-card">
+            <div className="stat-icon-wrap amber">
+              <Coins size={22} />
+            </div>
+            <div>
+              <span className="stat-tile-label">{isKm ? 'សរុបជារៀល (KHR)' : 'Total in KHR'}</span>
+              <h3 className="stat-tile-val text-amber">{Math.round(totalKHR).toLocaleString()} ៛</h3>
+            </div>
+          </div>
+
+          <div className="stat-tile-card">
+            <div className="stat-icon-wrap emerald">
+              <DollarSign size={22} />
+            </div>
+            <div>
+              <span className="stat-tile-label">{isKm ? 'សរុបជាដុល្លារ (USD)' : 'Total in USD'}</span>
+              <h3 className="stat-tile-val text-emerald">${totalUSD.toFixed(2)}</h3>
             </div>
           </div>
         </div>
@@ -235,9 +279,12 @@ export default function HistoryScreen() {
             <div className="bar-chart-container">
               {weeklyBars.map((bar, idx) => (
                 <div key={idx} className="bar-column">
-                  <span className="bar-value-tooltip">${bar.value.toFixed(0)}</span>
+                  <span className="bar-value-tooltip">${bar.value.toFixed(1)}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ height: `${bar.percent}%` }} />
+                    <div 
+                      className="bar-fill" 
+                      style={{ height: bar.value > 0 ? `${bar.percent}%` : '4px' }} 
+                    />
                   </div>
                   <span className="bar-label">{bar.label}</span>
                 </div>
@@ -245,12 +292,12 @@ export default function HistoryScreen() {
             </div>
           </div>
 
-          {/* Product Breakdown Card */}
+          {/* Product Share Breakdown */}
           <div className="chart-card">
             <div className="chart-card-header">
               <div className="chart-header-left">
                 <PieChart size={18} className="chart-header-icon" />
-                <h3>{isKm ? 'សង្ខេបផលិតផល' : 'Product Share'}</h3>
+                <h3>{isKm ? 'ចំណែកផលិតផល' : 'Product Share'}</h3>
               </div>
               <span className="chart-badge">{productBreakdown.length} {isKm ? 'មុខ' : 'items'}</span>
             </div>
@@ -267,7 +314,7 @@ export default function HistoryScreen() {
                       <span className="prod-rank">{idx + 1}</span>
                       <div>
                         <div className="prod-name">{p.name}</div>
-                        <span className="prod-qty">{p.qty} {isKm ? 'ចំនួនលក់' : 'sold'}</span>
+                        <span className="prod-qty">{p.qty} {isKm ? 'លក់បាន' : 'sold'}</span>
                       </div>
                     </div>
                     <div className="prod-right">
@@ -280,47 +327,44 @@ export default function HistoryScreen() {
           </div>
         </div>
 
-        {/* Recent Transactions Feed */}
-        <div className="analytics-transactions-card">
+        {/* Best Selling Products Card */}
+        <div className="analytics-best-sellers-card">
           <div className="chart-card-header">
-            <h3>{isKm ? 'ប្រតិបត្តិការថ្មីៗ' : 'Recent Transactions'}</h3>
-            <Link to="/dashboard/transactions" className="analytics-view-all">
-              {isKm ? 'មើលទាំងអស់' : 'View all'}
-            </Link>
+            <div className="chart-header-left">
+              <Award size={18} className="chart-header-icon gold" />
+              <h3>{isKm ? 'ទំនិញលក់ដាច់បំផុត' : 'Best Selling Products'}</h3>
+            </div>
+            <span className="chart-badge">{productBreakdown.length} {isKm ? 'មុខ' : 'items'}</span>
           </div>
 
-          <div className="recent-tx-list">
-            {filteredSales.length === 0 ? (
+          <div className="best-sellers-list">
+            {productBreakdown.length === 0 ? (
               <div className="empty-chart-text">
-                {isKm ? 'មិនមានការលក់ថ្មីៗទេ។' : 'No recent transactions recorded.'}
+                {isKm ? 'គ្មានទិន្នន័យទំនិញលក់ដាច់ទេ។' : 'No best selling products recorded yet.'}
               </div>
             ) : (
-              filteredSales.slice(0, 4).map((sale, idx) => {
-                const saleUsd = Number(sale.totalUSD || sale.totalAmount || 0);
-                const saleKhr = Number(sale.totalKHR || saleUsd * EXCHANGE_RATE);
-                return (
-                  <div key={sale.saleId || idx} className="recent-tx-row" onClick={() => navigate('/dashboard/transactions')}>
-                    <div className="tx-col-left">
-                      <div className="tx-badge-icon">
-                        <ShoppingCart size={18} />
-                      </div>
-                      <div>
-                        <div className="tx-title">{summarizeSaleTitle(sale)}</div>
-                        <div className="tx-time">
-                          {new Date(sale.date || sale.createdAt || Date.now()).toLocaleDateString(isKm ? 'km-KH' : 'en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </div>
-                      </div>
+              productBreakdown.map((item, idx) => (
+                <div key={idx} className="best-seller-row">
+                  <div className="best-seller-left">
+                    <div className={`best-seller-rank ${idx < 3 ? `top-${idx + 1}` : ''}`}>
+                      {idx + 1}
                     </div>
-                    <div className="tx-col-right">
-                      <div className="tx-usd-text">${saleUsd.toFixed(2)}</div>
-                      <div className="tx-khr-text">{Math.round(saleKhr).toLocaleString()} KHR</div>
+                    <div>
+                      <div className="best-seller-title">{item.name}</div>
+                      <div className="best-seller-qty">
+                        {item.qty} {isKm ? 'ចំនួនបានលក់' : 'units sold'}
+                      </div>
                     </div>
                   </div>
-                );
-              })
+
+                  <div className="best-seller-right">
+                    <div className="best-seller-usd">${item.totalUSD.toFixed(2)}</div>
+                    <div className="best-seller-khr">
+                      {Math.round(item.totalKHR).toLocaleString()} ៛
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

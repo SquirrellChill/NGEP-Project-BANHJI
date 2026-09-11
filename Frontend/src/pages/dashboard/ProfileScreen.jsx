@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft,
-  Check, 
   ChevronRight,
   Globe2, 
   Languages, 
@@ -12,7 +11,6 @@ import {
   Pencil, 
   Phone, 
   Shield, 
-  Store, 
   Sun, 
   User
 } from 'lucide-react';
@@ -30,8 +28,6 @@ const profileFallback = {
   name: 'Seller',
   firstName: 'Seller',
   lastName: '',
-  businessName: 'Kotchomnol Store',
-  role: 'Owner',
   email: '',
   phone: '',
   address: '',
@@ -42,6 +38,7 @@ export default function ProfileScreen() {
   const { user, updateUser, logout } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const isKm = language !== 'en';
 
   const profile = buildDashboardProfile(user, profileFallback);
   const [isEditing, setIsEditing] = useState(false);
@@ -55,7 +52,6 @@ export default function ProfileScreen() {
     lastName: profile.lastName || '',
     phoneNumber: profile.phone || '',
     email: profile.email || '',
-    role: profile.role || 'Owner',
   });
 
   const [saving, setSaving] = useState(false);
@@ -65,18 +61,12 @@ export default function ProfileScreen() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleRoleSelect = (role) => {
-    if (!isEditing) return;
-    setForm((prev) => ({ ...prev, role }));
-  };
-
   const handleCancel = () => {
     setForm({
       firstName: profile.firstName || '',
       lastName: profile.lastName || '',
       phoneNumber: profile.phone || '',
       email: profile.email || '',
-      role: profile.role || 'Owner',
     });
     setStatus({ type: '', message: '' });
     setIsEditing(false);
@@ -90,10 +80,13 @@ export default function ProfileScreen() {
     try {
       const response = await updateMe(form);
       updateUser(response.data.data.user);
-      setStatus({ type: 'success', message: t('profileUpdated') || 'Profile updated successfully.' });
+      setStatus({ 
+        type: 'success', 
+        message: t('profileUpdated') || (isKm ? 'បានធ្វើបច្ចុប្បន្នភាពគណនីដោយជោគជ័យ' : 'Profile updated successfully.') 
+      });
       setIsEditing(false);
     } catch (err) {
-      const errMsg = err?.response?.data?.detail || t('unableProfile') || 'Unable to update profile.';
+      const errMsg = err?.response?.data?.detail || t('unableProfile') || (isKm ? 'មិនអាចធ្វើបច្ចុប្បន្នភាពគណនីបានទេ' : 'Unable to update profile.');
       setStatus({ type: 'error', message: errMsg });
     } finally {
       setSaving(false);
@@ -108,7 +101,7 @@ export default function ProfileScreen() {
   return (
     <MobileAppShell activeTab="profile" showBottomNav={true}>
       <div className="settings-page-wrapper">
-        {/* Mobile-only sub-navigation: Switch back to menu when inside account details */}
+        {/* Mobile-only sub-navigation */}
         {mobileView === 'account_details' && (
           <div className="settings-topbar mobile-only-bar">
             <button 
@@ -120,7 +113,7 @@ export default function ProfileScreen() {
               }}
             >
               <ArrowLeft size={18} />
-              <span>{t('menu') || 'Menu'}</span>
+              <span>{t('menu') || (isKm ? 'ម៉ឺនុយ' : 'Menu')}</span>
             </button>
           </div>
         )}
@@ -133,10 +126,6 @@ export default function ProfileScreen() {
                 <UserAvatar size="xl" />
               </div>
               <h2 className="sidebar-user-name">{profile.name}</h2>
-              <div className="sidebar-balance-badge">
-                <strong>{profile.role || 'Owner'}</strong>
-                <small>{profile.businessName || 'Kotchomnol Store'}</small>
-              </div>
             </div>
 
             <nav className="settings-nav-menu" aria-label="Settings navigation">
@@ -147,7 +136,7 @@ export default function ProfileScreen() {
               >
                 <User size={18} />
                 <div className="nav-item-dual">
-                  <span>{t('myAccount') || 'My Account'}</span>
+                  <span>{t('myAccount') || (isKm ? 'គណនីរបស់ខ្ញុំ' : 'My Account')}</span>
                   <ChevronRight size={16} className="mobile-chevron" />
                 </div>
               </button>
@@ -159,12 +148,12 @@ export default function ProfileScreen() {
               >
                 <Lock size={18} />
                 <div className="nav-item-dual">
-                  <span>{t('changePassword') || 'Change password'}</span>
+                  <span>{t('changePassword') || (isKm ? 'ផ្លាស់ប្តូរលេខសម្ងាត់' : 'Change password')}</span>
                   <ChevronRight size={16} className="mobile-chevron" />
                 </div>
               </button>
 
-              {/* Language: Shows the target language you switch to */}
+              {/* Language toggle */}
               <button 
                 type="button" 
                 className="settings-nav-item"
@@ -172,12 +161,12 @@ export default function ProfileScreen() {
               >
                 <Languages size={18} />
                 <div className="nav-item-dual">
-                  <span>{t('language') || 'Language'}</span>
-                  <span className="lang-tag">{language === 'en' ? 'KM' : 'EN'}</span>
+                  <span>{t('language') || (isKm ? 'ភាសា' : 'Language')}</span>
+                  <span className="lang-tag">{language === 'en' ? 'KH' : 'EN'}</span>
                 </div>
               </button>
 
-              {/* Theme: Shows the target theme you switch to */}
+              {/* Theme toggle */}
               <button 
                 type="button" 
                 className="settings-nav-item"
@@ -185,7 +174,7 @@ export default function ProfileScreen() {
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                 <div className="nav-item-dual">
-                  <span>{t('theme') || 'Theme'}</span>
+                  <span>{t('theme') || (isKm ? 'ទម្រង់' : 'Theme')}</span>
                   <span className="theme-tag">{theme === 'dark' ? 'LIGHT' : 'DARK'}</span>
                 </div>
               </button>
@@ -197,7 +186,7 @@ export default function ProfileScreen() {
               >
                 <Globe2 size={18} />
                 <div className="nav-item-dual">
-                  <span>{t('backToWebsite') || 'Back to Website'}</span>
+                  <span>{t('backToWebsite') || (isKm ? 'ត្រឡប់ទៅគេហទំព័រដើម' : 'Back to Website')}</span>
                   <ChevronRight size={16} className="mobile-chevron" />
                 </div>
               </button>
@@ -210,7 +199,7 @@ export default function ProfileScreen() {
                 onClick={handleLogout}
               >
                 <LogOut size={18} />
-                <span>{t('logout') || 'Log out'}</span>
+                <span>{t('logout') || (isKm ? 'ចាកចេញ' : 'Log out')}</span>
               </button>
             </nav>
           </aside>
@@ -222,8 +211,12 @@ export default function ProfileScreen() {
                 <Shield size={24} />
               </div>
               <div className="header-text-block">
-                <h1>{t('myAccount') || 'My Account'}</h1>
-                <p>Manage your personal details, business role, and system identity.</p>
+                <h1>{t('myAccount') || (isKm ? 'គណនីរបស់ខ្ញុំ' : 'My Account')}</h1>
+                <p>
+                  {isKm 
+                    ? 'គ្រប់គ្រងព័ត៌មានផ្ទាល់ខ្លួន និងអត្តសញ្ញាណប្រព័ន្ធរបស់អ្នក។' 
+                    : 'Manage your personal details and system identity.'}
+                </p>
               </div>
 
               {!isEditing && (
@@ -233,7 +226,7 @@ export default function ProfileScreen() {
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil size={15} />
-                  <span>Edit</span>
+                  <span>{t('edit') || (isKm ? 'កែសម្រួល' : 'Edit')}</span>
                 </button>
               )}
             </header>
@@ -249,52 +242,38 @@ export default function ProfileScreen() {
               <div className="profile-view-container">
                 <div className="view-grid">
                   <div className="info-display-tile">
-                    <span className="info-tile-label">{t('firstName') || 'First Name'}</span>
+                    <span className="info-tile-label">{t('firstName') || (isKm ? 'នាមត្រកូល / ឈ្មោះ' : 'First Name')}</span>
                     <strong className="info-tile-value">{profile.firstName || '—'}</strong>
                   </div>
 
                   <div className="info-display-tile">
-                    <span className="info-tile-label">{t('lastName') || 'Last Name'}</span>
+                    <span className="info-tile-label">{t('lastName') || (isKm ? 'គោត្តនាម' : 'Last Name')}</span>
                     <strong className="info-tile-value">{profile.lastName || '—'}</strong>
                   </div>
                 </div>
 
                 <div className="info-display-tile full-width">
-                  <span className="info-tile-label">{t('emailAddress') || 'Email Address'}</span>
+                  <span className="info-tile-label">{t('emailAddress') || (isKm ? 'អាសយដ្ឋានអ៊ីមែល' : 'Email Address')}</span>
                   <div className="info-tile-iconic">
                     <Mail size={16} className="info-icon" />
                     <strong className="info-tile-value">{profile.email || '—'}</strong>
                   </div>
                 </div>
 
-                <div className="view-grid">
-                  <div className="info-display-tile">
-                    <span className="info-tile-label">{t('phoneNumber') || 'Phone Number'}</span>
-                    <div className="info-tile-iconic">
-                      <Phone size={16} className="info-icon" />
-                      <strong className="info-tile-value">{profile.phone || '—'}</strong>
-                    </div>
-                  </div>
-
-                  <div className="info-display-tile">
-                    <span className="info-tile-label">Business Type</span>
-                    <div className="info-tile-iconic">
-                      <Store size={16} className="info-icon" />
-                      <strong className="info-tile-value">Retail & Cafe POS</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="role-summary-box">
-                  <span className="info-tile-label">Account Role</span>
-                  <div className="role-summary-pill">
-                    <span className="role-dot" />
-                    <strong>{form.role === 'Manager' ? 'Cashier / Staff' : 'Store Owner'}</strong>
+                <div className="info-display-tile full-width">
+                  <span className="info-tile-label">{t('phoneNumber') || (isKm ? 'លេខទូរស័ព្ទ' : 'Phone Number')}</span>
+                  <div className="info-tile-iconic">
+                    <Phone size={16} className="info-icon" />
+                    <strong className="info-tile-value">{profile.phone || '—'}</strong>
                   </div>
                 </div>
 
                 <div className="view-info-footer">
-                  <p>Click "Edit" above whenever you need to update your phone number, name, or role.</p>
+                  <p>
+                    {isKm 
+                      ? 'ចុចប៊ូតុង «កែសម្រួល» ខាងលើនៅពេលណាដែលអ្នកចង់ធ្វើបច្ចុប្បន្នភាពលេខទូរស័ព្ទ ឬឈ្មោះរបស់អ្នក។' 
+                      : 'Click "Edit" above whenever you need to update your phone number or name.'}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -302,32 +281,32 @@ export default function ProfileScreen() {
               <form className="reference-form" onSubmit={handleSave}>
                 <div className="form-row-grid">
                   <div className="floating-field">
-                    <label htmlFor="firstName">{t('firstName') || 'First Name'}</label>
+                    <label htmlFor="firstName">{t('firstName') || (isKm ? 'នាមត្រកូល / ឈ្មោះ' : 'First Name')}</label>
                     <input 
                       id="firstName"
                       name="firstName" 
                       value={form.firstName} 
                       onChange={handleChange} 
-                      placeholder="First Name"
+                      placeholder={isKm ? 'ឈ្មោះ' : 'First Name'}
                       required 
                     />
                   </div>
 
                   <div className="floating-field">
-                    <label htmlFor="lastName">{t('lastName') || 'Last Name'}</label>
+                    <label htmlFor="lastName">{t('lastName') || (isKm ? 'គោត្តនាម' : 'Last Name')}</label>
                     <input 
                       id="lastName"
                       name="lastName" 
                       value={form.lastName} 
                       onChange={handleChange} 
-                      placeholder="Last Name"
+                      placeholder={isKm ? 'គោត្តនាម' : 'Last Name'}
                       required 
                     />
                   </div>
                 </div>
 
                 <div className="floating-field full-width">
-                  <label htmlFor="email">{t('emailAddress') || 'Email Address'}</label>
+                  <label htmlFor="email">{t('emailAddress') || (isKm ? 'អាសយដ្ឋានអ៊ីមែល' : 'Email Address')}</label>
                   <input 
                     id="email"
                     type="email" 
@@ -338,63 +317,30 @@ export default function ProfileScreen() {
                   />
                 </div>
 
-                <div className="form-row-grid">
-                  <div className="floating-field">
-                    <label htmlFor="phoneNumber">{t('phoneNumber') || 'Phone Number'}</label>
-                    <div className="phone-prefix-input">
-                      <span className="phone-tag">🇰🇭 +855</span>
-                      <input 
-                        id="phoneNumber"
-                        name="phoneNumber" 
-                        value={form.phoneNumber} 
-                        onChange={handleChange} 
-                        placeholder="71 995 6996"
-                        required 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="floating-field">
-                    <label>Business Type</label>
-                    <div className="field-select-mock">
-                      <Store size={16} />
-                      <span>Retail & Cafe POS</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="role-selector-block">
-                  <span className="selector-title">Account Role</span>
-                  <div className="role-cards-grid">
-                    <button
-                      type="button"
-                      className={`role-option-card ${form.role === 'Owner' ? 'active' : ''}`}
-                      onClick={() => handleRoleSelect('Owner')}
-                    >
-                      {form.role === 'Owner' && <Check size={14} className="role-check" />}
-                      <User size={18} />
-                      <span>Store Owner</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`role-option-card ${form.role === 'Manager' ? 'active' : ''}`}
-                      onClick={() => handleRoleSelect('Manager')}
-                    >
-                      {form.role === 'Manager' && <Check size={14} className="role-check" />}
-                      <Shield size={18} />
-                      <span>Cashier / Staff</span>
-                    </button>
+                <div className="floating-field full-width">
+                  <label htmlFor="phoneNumber">{t('phoneNumber') || (isKm ? 'លេខទូរស័ព្ទ' : 'Phone Number')}</label>
+                  <div className="phone-prefix-input">
+                    <span className="phone-tag">🇰🇭 +855</span>
+                    <input 
+                      id="phoneNumber"
+                      name="phoneNumber" 
+                      value={form.phoneNumber} 
+                      onChange={handleChange} 
+                      placeholder="71 995 6996"
+                      required 
+                    />
                   </div>
                 </div>
 
                 <p className="form-explanatory-copy">
-                  In order to access all synced accounting tools, please keep your phone and account details updated.
+                  {isKm
+                    ? 'ដើម្បីទទួលបានបទពិសោធន៍ប្រើប្រាស់ និងសុវត្ថិភាពល្អបំផុត សូមរក្សាលេខទូរស័ព្ទ និងព័ត៌មានគណនីរបស់អ្នកឱ្យទាន់សម័យ។'
+                    : 'Please keep your phone and account details updated to ensure seamless access.'}
                 </p>
 
                 <div className="form-actions-group">
                   <button className="settings-primary-btn" type="submit" disabled={saving}>
-                    {saving ? (t('saving') || 'Saving...') : (t('saveChanges') || 'Save Changes')}
+                    {saving ? (t('saving') || (isKm ? 'កំពុងរក្សាទុក...' : 'Saving...')) : (t('saveChanges') || (isKm ? 'រក្សាទុកការផ្លាស់ប្តូរ' : 'Save Changes'))}
                   </button>
                   <button 
                     className="settings-cancel-btn" 
@@ -402,7 +348,7 @@ export default function ProfileScreen() {
                     disabled={saving}
                     onClick={handleCancel}
                   >
-                    {t('cancel') || 'Cancel'}
+                    {t('cancel') || (isKm ? 'បោះបង់' : 'Cancel')}
                   </button>
                 </div>
               </form>

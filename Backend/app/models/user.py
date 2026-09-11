@@ -14,6 +14,9 @@ class User(Base):
     email = Column(String(255), nullable=True, unique=True)
     password_hash = Column(String(255), nullable=True)
 
+    # Profile Avatar
+    profile_picture = Column(String(500), nullable=True)
+
     # Email Verification
     is_verified = Column(Boolean, nullable=False, default=False)
     email_verification_code = Column(String(255), nullable=True)

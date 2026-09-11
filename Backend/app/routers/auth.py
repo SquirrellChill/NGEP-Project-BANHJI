@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta, timezone
+import os
+import shutil
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -14,13 +17,19 @@ from app.schemas.user import (
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
+    RequestPasswordChangeOTPRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
     UpdateProfileRequest,
     UserOut,
+    VerifyChangePasswordRequest,
     VerifyEmailRequest,
 )
-from app.services.email_service import send_password_reset_email, send_verification_email
+from app.services.email_service import (
+    send_password_change_otp_email,
+    send_password_reset_email,
+    send_verification_email,
+)
 from app.services.token_service import (
     generate_reset_token,
     generate_verification_code,
@@ -29,6 +38,18 @@ from app.services.token_service import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+UPLOAD_DIR = "uploads/avatars"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+class AuthenticatedResetVerifyRequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=8)
+
+
+class AuthenticatedForgotOTPRequest(BaseModel):
+    email: EmailStr
 
 
 @router.post("/register")
@@ -180,8 +201,7 @@ def resend_verification(
         expires_at = user.email_verification_expires
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
-        
-        # Cooldown check: Allow resend only if less than 14 minutes remain out of 15
+
         remaining_seconds = (expires_at - now).total_seconds()
         if remaining_seconds > 14 * 60:
             raise HTTPException(
@@ -268,21 +288,189 @@ def update_me(
     }
 
 
-@router.post("/change-password")
-def change_password(
-    payload: ChangePasswordRequest,
+@router.post("/me/avatar")
+def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image files (.jpg, .jpeg, .png, .webp) are allowed.",
+        )
+
+    file_name = f"user_{current_user.user_id}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    avatar_url = f"/uploads/avatars/{file_name}"
+    current_user.profile_picture = avatar_url
+    user_repo.save_user(db, current_user)
+
+    return {
+        "success": True,
+        "message": "Avatar updated successfully",
+        "data": {"user": UserOut.model_validate(current_user)},
+    }
+
+
+@router.post("/change-password/request-otp")
+def request_change_password_otp(
+    payload: RequestPasswordChangeOTPRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not current_user.password_hash:
-        raise HTTPException(status_code=400, detail="This account does not have a password set.")
-    if not verify_password(payload.current_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account does not have a password set.",
+        )
 
-    current_user.password_hash = hash_password(payload.new_password)
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    code, hashed_code, expires_at = generate_verification_code()
+    current_user.email_verification_code = hashed_code
+    current_user.email_verification_expires = expires_at
+    current_user.email_verification_attempts = 0
     user_repo.save_user(db, current_user)
 
-    return {"success": True, "message": "Password changed successfully"}
+    background_tasks.add_task(
+        send_password_change_otp_email,
+        current_user.email,
+        code,
+        current_user.first_name,
+    )
+
+    return {
+        "success": True,
+        "message": "Verification code has been sent to your registered email.",
+    }
+
+
+@router.post("/change-password/verify")
+def verify_and_change_password(
+    payload: VerifyChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account does not have a password set.",
+        )
+
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    now = datetime.now(timezone.utc)
+    if not current_user.email_verification_expires or not current_user.email_verification_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active verification code found. Please request a new one.",
+        )
+
+    expires_at = current_user.email_verification_expires
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired. Please request a new one.",
+        )
+
+    if hash_code(payload.code.strip()) != current_user.email_verification_code:
+        current_user.email_verification_attempts += 1
+        user_repo.save_user(db, current_user)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification code.",
+        )
+
+    current_user.password_hash = hash_password(payload.new_password)
+    current_user.email_verification_code = None
+    current_user.email_verification_expires = None
+    current_user.email_verification_attempts = 0
+    user_repo.save_user(db, current_user)
+
+    return {"success": True, "message": "Password changed successfully."}
+
+
+@router.post("/change-password/forgot-current-otp")
+def request_forgot_current_password_otp(
+    payload: AuthenticatedForgotOTPRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Requires the user to type their Gmail, confirms it matches current_user.email, and sends an OTP."""
+    if payload.email.strip().lower() != current_user.email.strip().lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The email entered does not match your registered account email.",
+        )
+
+    code, hashed_code, expires_at = generate_verification_code()
+    current_user.email_verification_code = hashed_code
+    current_user.email_verification_expires = expires_at
+    current_user.email_verification_attempts = 0
+    user_repo.save_user(db, current_user)
+
+    background_tasks.add_task(
+        send_password_change_otp_email,
+        current_user.email,
+        code,
+        current_user.first_name,
+    )
+
+    return {
+        "success": True,
+        "message": f"Verification code sent to {current_user.email}",
+    }
+
+
+@router.post("/change-password/reset-with-otp")
+def reset_with_otp_authenticated(
+    payload: AuthenticatedResetVerifyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Verifies OTP and updates password directly for the logged-in user."""
+    now = datetime.now(timezone.utc)
+    if not current_user.email_verification_expires or not current_user.email_verification_code:
+        raise HTTPException(status_code=400, detail="No active verification code found.")
+
+    expires_at = current_user.email_verification_expires
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < now:
+        raise HTTPException(status_code=400, detail="Verification code has expired.")
+
+    if hash_code(payload.code.strip()) != current_user.email_verification_code:
+        current_user.email_verification_attempts += 1
+        user_repo.save_user(db, current_user)
+        raise HTTPException(status_code=400, detail="Invalid verification code.")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    current_user.email_verification_code = None
+    current_user.email_verification_expires = None
+    current_user.email_verification_attempts = 0
+    user_repo.save_user(db, current_user)
+
+    return {"success": True, "message": "Password reset successfully!"}
 
 
 @router.post("/forgot-password")
