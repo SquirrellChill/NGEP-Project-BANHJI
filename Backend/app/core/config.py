@@ -104,6 +104,16 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 2
     RETRY_BASE_DELAY_S: float = 0.75
 
+    # --- Bakong KHQR ---
+    BAKONG_TOKEN: str                      # Bakong Open API developer token (get from https://api-bakong.nbc.gov.kh)
+    BAKONG_ACCOUNT_ID: str                  # e.g. "your_username@bank" (from Bakong app profile)
+    BAKONG_MERCHANT_NAME: str = "KotChomnol"
+    BAKONG_MERCHANT_CITY: str = "Phnom Penh"
+    KHQR_CURRENCY: str = "USD"              # "USD" or "KHR"
+    KHQR_EXPIRE_MINUTES: int = 5            # how long a generated QR stays valid
+    KHQR_POLL_INTERVAL_SECONDS: int = 5     # how often background task calls Bakong to check payment status
+
+
     class Config:
         env_file = ".env"
 
