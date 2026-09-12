@@ -161,3 +161,53 @@ a {
   box-shadow: 0 14px 30px var(--color-shadow);
   color: var(--color-text-dark);
 }
+
+/* ==========================================================================
+   Global User Avatar Image & Circular Crop
+   ========================================================================== */
+.dash-avatar {
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #7e22ce;
+  background-color: #f3e8ff;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.dash-avatar-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.dash-avatar-md {
+  width: 40px;
+  height: 40px;
+}
+
+.dash-avatar-lg {
+  width: 48px;
+  height: 48px;
+}
+
+.dash-avatar-xl {
+  width: 88px;
+  height: 88px;
+  border-width: 3px;
+}
+
+.dash-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.42);
+  display: block;
+  border-radius: 50%;
+}
+
+html[data-theme='dark'] .dash-avatar {
+  border-color: #a855f7;
+  background-color: #1f1438;
+}

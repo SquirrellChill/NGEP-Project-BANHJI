@@ -10,6 +10,8 @@ import LandingPage from '../pages/LandingPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import TermsPage from '../pages/TermsPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
+import AboutPage from '../pages/dashboard/AboutPage.jsx';
+import ContactPage from '../pages/dashboard/ContactPage.jsx';
 import HistoryScreen from '../pages/dashboard/HistoryScreen.jsx';
 import TransactionsScreen from '../pages/dashboard/TransactionsScreen.jsx';
 import VoiceScreen from '../pages/dashboard/VoiceScreen.jsx';
@@ -33,6 +35,8 @@ export default function AppRoutes() {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -47,6 +51,22 @@ export default function AppRoutes() {
                 element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/about"
+                element={
+                  <ProtectedRoute>
+                    <AboutPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/contact"
+                element={
+                  <ProtectedRoute>
+                    <ContactPage />
                   </ProtectedRoute>
                 }
               />

@@ -15,6 +15,7 @@ import { getSales } from '../services/transactionService';
 import { calculateEquivalentTotals, APPLICATION_EXCHANGE_RATE } from '../utils/currency';
 import { normalizeSaleFromApi, summarizeSaleTitle } from '../utils/sales';
 import { buildDashboardProfile } from '../utils/profile';
+import UserAvatar from '../components/dashboard/UserAvatar';
 import './DashboardPage.css';
 
 const EXCHANGE_RATE = APPLICATION_EXCHANGE_RATE || 4050; // 1 USD = 4,050 KHR
@@ -40,7 +41,6 @@ export default function DashboardPage() {
   const profile = buildDashboardProfile(user, profileFallback);
   const firstName = profile.firstName || profile.name?.split(' ')[0] || (isKm ? 'អ្នកលក់' : 'Seller');
   const fullDisplayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.name || 'Seller';
-  const initialLetter = (firstName.charAt(0) || 'U').toUpperCase();
 
   // Dynamic live date
   const today = new Date();
@@ -183,8 +183,14 @@ export default function DashboardPage() {
               {isKm ? 'នេះជាសង្ខេបអាជីវកម្មថ្ងៃនេះ។' : 'Here is your business overview today.'}
             </p>
           </div>
-          <div className="dash-header-avatar" onClick={() => navigate('/dashboard/profile')}>
-            {initialLetter}
+          <div 
+            className="dash-header-avatar-btn" 
+            onClick={() => navigate('/dashboard/profile')}
+            role="button"
+            tabIndex={0}
+            title={isKm ? 'ប្រវត្តិរូប' : 'Profile'}
+          >
+            <UserAvatar size="md" initials={firstName.charAt(0)} />
           </div>
         </header>
 

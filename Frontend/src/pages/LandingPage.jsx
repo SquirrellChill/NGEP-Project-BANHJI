@@ -10,21 +10,23 @@ const content = {
   km: {
     navFeatures: 'មុខងារ',
     navFaq: 'សំណួរ',
+    navAbout: 'អំពីយើង',
     navTerms: 'លក្ខខណ្ឌ',
     navPrivacy: 'ឯកជនភាព',
+    navContact: 'ទំនាក់ទំនង',
     navSignIn: 'ចូលគណនី',
     navStartFree: 'ចាប់ផ្ដើម',
     navDashboard: 'ទំព័រដើម',
     navLogout: 'ចាកចេញ',
     heroBadge: 'បង្កើតសម្រាប់ម្ចាស់ហាងខ្មែរ',
-    heroTitle1: 'និយាយការលក់របស់អ្នក។ ',
-    heroTitle2: 'មើលចំណូលរបស់អ្នក។',
+    heroTitle1: 'និយាយការលក់របស់អ្នក ',
+    heroTitle2: 'មើលចំណូលរបស់អ្នក',
     heroSub: 'និយាយការលក់ក្នុងហាង ហើយបម្លែងទៅជាកំណត់ត្រាលក់ សង្ខេបចំណូល និងបញ្ជីដែលអាចពិនិត្យបាន។',
     heroBtnPrimaryAuth: 'កត់ត្រាការលក់',
     heroBtnPrimaryGuest: 'បង្កើតគណនី',
     heroBtnSecondaryAuth: 'ទំព័រដើម',
     heroBtnSecondaryGuest: 'ចូលគណនី',
-    heroDisclaimer: 'គ្មានទិន្នន័យក្លែងក្លាយ។ ការលក់ដែលបានបញ្ជាក់ត្រូវបានរក្សាទុកតាមគណនីរបស់អ្នក។',
+    heroDisclaimer: 'គ្មានទិន្នន័យក្លែងក្លាយ​ ការលក់ដែលបានបញ្ជាក់ត្រូវបានរក្សាទុកតាមគណនីរបស់អ្នក។',
     revLabel: 'ចំណូលថ្ងៃនេះ',
     revBadge: 'ផ្សាយផ្ទាល់',
     revUsd: 'សមមូល: $10.25',
@@ -55,17 +57,19 @@ const content = {
     footerDesc: 'KOTCHOMNOL ជួយម្ចាស់ហាងកត់ត្រាការលក់ដោយសំឡេង ឬបញ្ចូលដោយដៃ ពិនិត្យទំនិញនីមួយៗ ហើយរក្សាទុកប្រតិបត្តិការដែលបានបញ្ជាក់ទៅក្នុងកំណត់ត្រាចំណូលដែលបានផ្ទៀងផ្ទាត់។',
     footerHome: 'ទំព័រដើម',
     footerFeatures: 'មុខងារ',
-    footerAbout: 'អំពី',
+    footerAbout: 'អំពីយើង',
     footerTerms: 'លក្ខខណ្ឌ',
     footerPrivacy: 'ឯកជនភាព',
     footerContact: 'ទំនាក់ទំនង',
-    footerCopyright: 'រក្សាសិទ្ធិ 2026 KOTCHOMNOL។ រក្សាសិទ្ធិគ្រប់យ៉ាង។',
+    footerCopyright: 'រក្សាសិទ្ធិ 2026 KOTCHOMNOL​ រក្សាសិទ្ធិគ្រប់យ៉ាង',
   },
   en: {
     navFeatures: 'Features',
     navFaq: 'FAQ',
+    navAbout: 'About',
     navTerms: 'Terms',
     navPrivacy: 'Privacy',
+    navContact: 'Contact',
     navSignIn: 'Sign In',
     navStartFree: 'Start Free',
     navDashboard: 'Home',
@@ -160,7 +164,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="landing-page font-kantumruy">
+    <div className="landing-page font-kantomruy">
       {/* Floating Header */}
       <header className="landing-navbar-wrapper">
         <div className="landing-navbar">
@@ -178,8 +182,10 @@ export default function LandingPage() {
           <nav className="landing-nav-links" aria-label="Primary Navigation">
             <a href="#features" onClick={(e) => handleNavClick(e, 'features')}>{txt.navFeatures}</a>
             <a href="#faq" onClick={(e) => handleNavClick(e, 'faq')}>{txt.navFaq}</a>
+            <Link to="/about">{txt.navAbout}</Link>
             <Link to="/terms">{txt.navTerms}</Link>
             <Link to="/privacy">{txt.navPrivacy}</Link>
+            <Link to="/contact">{txt.navContact}</Link>
           </nav>
 
           {/* Nav Right Controls */}
@@ -263,7 +269,7 @@ export default function LandingPage() {
         onClick={closeMenu}
       />
 
-      {/* Clean Mobile Menu from Right Edge without "Menu" title, keeping the X button */}
+      {/* Mobile Drawer Menu */}
       <aside className={`landing-drawer-panel ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="drawer-header-row">
           <button 
@@ -279,10 +285,12 @@ export default function LandingPage() {
         <nav className="drawer-nav-links">
           <a href="#features" onClick={(e) => handleNavClick(e, 'features')}>{txt.navFeatures}</a>
           <a href="#faq" onClick={(e) => handleNavClick(e, 'faq')}>{txt.navFaq}</a>
+          <Link to="/about" onClick={closeMenu}>{txt.navAbout}</Link>
           <Link to="/terms" onClick={closeMenu}>{txt.navTerms}</Link>
           <Link to="/privacy" onClick={closeMenu}>{txt.navPrivacy}</Link>
+          <Link to="/contact" onClick={closeMenu}>{txt.navContact}</Link>
 
-          {/* Mode */}
+          {/* Theme Mode Toggle */}
           <button 
             type="button" 
             className="drawer-list-btn" 
@@ -292,7 +300,7 @@ export default function LandingPage() {
             <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
 
-          {/* Language: KH Khmer or EN English */}
+          {/* Language Toggle */}
           <button 
             type="button" 
             className="drawer-list-btn" 
@@ -481,10 +489,10 @@ export default function LandingPage() {
             <div className="footer-links-col">
               <a href="#top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>{txt.footerHome}</a>
               <a href="#features" onClick={(e) => handleNavClick(e, 'features')}>{txt.footerFeatures}</a>
-              <a href="#about">{txt.footerAbout}</a>
+              <Link to="/about">{txt.footerAbout}</Link>
               <Link to="/terms">{txt.footerTerms}</Link>
               <Link to="/privacy">{txt.footerPrivacy}</Link>
-              <a href="mailto:support@kotchomnol.ai">{txt.footerContact}</a>
+              <Link to="/contact">{txt.footerContact}</Link>
             </div>
           </div>
 

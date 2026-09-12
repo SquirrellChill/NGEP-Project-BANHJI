@@ -166,20 +166,23 @@ html[data-theme='dark'] .dash-sidebar {
   margin: 2px 0 0;
 }
 
-.dash-header-avatar {
-  width: 40px;
-  height: 40px;
-  background-color: rgba(126, 34, 206, 0.12);
-  color: #7e22ce;
-  border: 1px solid rgba(126, 34, 206, 0.2);
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 50%;
-  display: flex;
+/* Clickable Avatar Button in Top Header */
+.dash-header-avatar-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.1);
+  border-radius: 50%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.18);
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.dash-header-avatar-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(126, 34, 206, 0.35);
 }
 
 /* Dashboard Body Content */

@@ -1,0 +1,146 @@
+.contact-intro {
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(126, 34, 206, 0.12);
+}
+
+.contact-intro p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #475569;
+  margin: 0;
+}
+
+.contact-channels-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 680px) {
+  .contact-channels-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.contact-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(126, 34, 206, 0.14);
+  background-color: #faf7fd;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.04);
+}
+
+.contact-card:hover {
+  transform: translateY(-3px);
+  background-color: #ffffff;
+  border-color: #7e22ce;
+  box-shadow: 0 10px 24px rgba(126, 34, 206, 0.12);
+}
+
+.contact-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.contact-card-body {
+  flex: 1;
+}
+
+.contact-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 0 0 4px;
+}
+
+.contact-card-handle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.contact-action-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7e22ce;
+  white-space: nowrap;
+}
+
+/* Static email card */
+.contact-card.email-static-card {
+  cursor: default;
+}
+
+.contact-card.email-static-card:hover {
+  transform: none;
+  border-color: rgba(126, 34, 206, 0.14);
+  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.04);
+  background-color: #faf7fd;
+}
+
+.selectable-email {
+  user-select: all;
+  font-weight: 600;
+  color: #7e22ce !important;
+}
+
+/* Dark Theme */
+html[data-theme='dark'] .contact-intro {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='dark'] .contact-intro p {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .contact-card {
+  background-color: #16102d;
+  border-color: rgba(168, 85, 247, 0.2);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .contact-card:hover {
+  background-color: #1f143d;
+  border-color: #a855f7;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme='dark'] .contact-card.email-static-card:hover {
+  background-color: #16102d;
+  border-color: rgba(168, 85, 247, 0.2);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .contact-card-title {
+  color: #ffffff;
+}
+
+html[data-theme='dark'] .contact-card-handle {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .selectable-email {
+  color: #c084fc !important;
+}
+
+html[data-theme='dark'] .contact-action-badge {
+  color: #c084fc;
+}
+
+html[data-theme='dark'] .contact-card .contact-card-icon[style*="#000000"],
+html[data-theme='dark'] .contact-card .contact-card-icon[style*="rgb(0, 0, 0)"] {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
