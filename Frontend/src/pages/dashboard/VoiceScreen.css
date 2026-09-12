@@ -194,15 +194,34 @@ html[data-theme='dark'] .form-group label {
   box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.15);
 }
 
-html[data-theme='dark'] .manual-form input {
-  background-color: #1f2937;
-  border-color: #374151;
-  color: #ffffff;
+/* Dark Theme Input Fields Uniform Styling */
+html[data-theme='dark'] .manual-form input,
+html[data-theme='dark'] input[type="date"],
+html[data-theme='dark'] input[type="text"] {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #ffffff !important;
+  color-scheme: dark;
 }
 
-html[data-theme='dark'] .manual-form input:focus {
-  border-color: #9333ea;
-  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.25);
+html[data-theme='dark'] .manual-form input:focus,
+html[data-theme='dark'] input[type="date"]:focus,
+html[data-theme='dark'] input[type="text"]:focus {
+  border-color: #9333ea !important;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.25) !important;
+}
+
+/* Purple Calendar Picker Icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  filter: invert(48%) sepia(85%) saturate(1600%) hue-rotate(245deg) brightness(105%) contrast(105%);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  transform: scale(1.15);
+  filter: invert(60%) sepia(90%) saturate(2000%) hue-rotate(250deg) brightness(120%) contrast(110%);
 }
 
 .field-error {
@@ -237,9 +256,23 @@ html[data-theme='dark'] .manual-form input:focus {
 }
 
 .currency-pill.active {
-  background-color: rgba(126, 34, 206, 0.12);
-  border-color: #7e22ce;
-  color: #7e22ce;
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%) !important;
+  border-color: #7e22ce !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.35);
+}
+
+html[data-theme='dark'] .currency-pill {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .currency-pill.active {
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%) !important;
+  border-color: #a855f7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
 }
 
 .add-to-invoice-btn {

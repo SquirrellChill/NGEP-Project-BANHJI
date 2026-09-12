@@ -59,7 +59,6 @@ def register(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    # 1. Prevent duplicate phone collision across accounts
     if payload.phone_number:
         phone_user = user_repo.find_user_by_phone_number(db, payload.phone_number)
         if phone_user and phone_user.email != payload.email:
@@ -312,6 +311,9 @@ def update_me(
     current_user.last_name = payload.last_name
     current_user.phone_number = payload.phone_number
     current_user.email = payload.email
+
+    if payload.profile_picture is not None:
+        current_user.profile_picture = payload.profile_picture
 
     try:
         saved_user = user_repo.save_user(db, current_user)

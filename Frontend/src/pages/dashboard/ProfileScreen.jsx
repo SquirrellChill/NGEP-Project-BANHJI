@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft,
+  Check,
   ChevronRight,
   Globe2, 
   Languages, 
@@ -11,11 +12,12 @@ import {
   Pencil, 
   Phone, 
   Shield, 
+  Smile,
   Sun, 
-  User
+  User,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import UserAvatar from '../../components/dashboard/UserAvatar';
 import MobileAppShell from '../../components/dashboard/MobileAppShell';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -23,6 +25,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { updateMe } from '../../services/authService';
 import { buildDashboardProfile } from '../../utils/profile';
 import './ProfileSettings.css';
+
+const CARTOON_AVATARS = [
+  { id: 'girl-short', url: '/avatars/avatar-1.png', label: 'Girl Short Hair' },
+  { id: 'boy-clean',  url: '/avatars/avatar-2.png', label: 'Boy Clean' },
+  { id: 'girl-long',   url: '/avatars/avatar-3.jpg', label: 'Girl Long Hair' },
+  { id: 'boy-beard',  url: '/avatars/avatar-4.jpg', label: 'Boy Beard' },
+];
 
 const profileFallback = {
   name: 'Seller',
@@ -42,11 +51,13 @@ export default function ProfileScreen() {
 
   const profile = buildDashboardProfile(user, profileFallback);
   const [isEditing, setIsEditing] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   
-  // Mobile navigation view: 'menu' (default) or 'account_details'
   const [mobileView, setMobileView] = useState('menu');
 
-  // Form State
+  const activeAvatar = user?.profile_picture || CARTOON_AVATARS[0].url;
+
   const [form, setForm] = useState({
     firstName: profile.firstName || '',
     lastName: profile.lastName || '',
@@ -78,8 +89,14 @@ export default function ProfileScreen() {
     setStatus({ type: '', message: '' });
 
     try {
-      const response = await updateMe(form);
-      updateUser(response.data.data.user);
+      const response = await updateMe({
+        ...form,
+        profile_picture: activeAvatar,
+      });
+      const updated = response.data?.data?.user;
+      if (updated) {
+        updateUser(updated);
+      }
       setStatus({ 
         type: 'success', 
         message: t('profileUpdated') || (isKm ? 'បានធ្វើបច្ចុប្បន្នភាពគណនីដោយជោគជ័យ' : 'Profile updated successfully.') 
@@ -93,6 +110,42 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSelectAvatar = async (avatarUrl) => {
+    setSavingAvatar(true);
+    try {
+      const payload = {
+        firstName: form.firstName || profile.firstName || '',
+        lastName: form.lastName || profile.lastName || '',
+        phoneNumber: form.phoneNumber || profile.phone || '',
+        email: form.email || profile.email || user.email,
+        profile_picture: avatarUrl,
+      };
+
+      const response = await updateMe(payload);
+      const updatedUser = response?.data?.data?.user;
+      
+      if (updatedUser) {
+        updateUser(updatedUser);
+      } else {
+        updateUser({ ...user, profile_picture: avatarUrl });
+      }
+
+      setShowAvatarPicker(false);
+      setStatus({
+        type: 'success',
+        message: isKm ? 'បានផ្លាស់ប្តូររូបតំណាងតុក្កតាដោយជោគជ័យ' : 'Avatar updated successfully!',
+      });
+    } catch (err) {
+      console.error('Failed to update avatar:', err);
+      setStatus({
+        type: 'error',
+        message: isKm ? 'មិនអាចប្តូររូបតំណាងបានទេ' : 'Unable to change avatar.',
+      });
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -101,7 +154,6 @@ export default function ProfileScreen() {
   return (
     <MobileAppShell activeTab="profile" showBottomNav={true}>
       <div className="settings-page-wrapper">
-        {/* Mobile-only sub-navigation */}
         {mobileView === 'account_details' && (
           <div className="settings-topbar mobile-only-bar">
             <button 
@@ -123,7 +175,21 @@ export default function ProfileScreen() {
           <aside className={`settings-sidebar ${mobileView === 'menu' ? 'mobile-visible' : 'mobile-hidden'}`}>
             <div className="sidebar-profile-header">
               <div className="sidebar-avatar-wrap">
-                <UserAvatar size="xl" />
+                <div className="avatar-img-container">
+                  <img 
+                    src={activeAvatar} 
+                    alt="Cartoon Profile Avatar" 
+                    className="cartoon-avatar-main" 
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="avatar-edit-badge"
+                  onClick={() => setShowAvatarPicker(true)}
+                  title={isKm ? 'ផ្លាស់ប្តូររូបតុក្កតា' : 'Change Cartoon Avatar'}
+                >
+                  <Smile size={16} />
+                </button>
               </div>
               <h2 className="sidebar-user-name">{profile.name}</h2>
             </div>
@@ -153,7 +219,6 @@ export default function ProfileScreen() {
                 </div>
               </button>
 
-              {/* Language toggle */}
               <button 
                 type="button" 
                 className="settings-nav-item"
@@ -166,7 +231,6 @@ export default function ProfileScreen() {
                 </div>
               </button>
 
-              {/* Theme toggle */}
               <button 
                 type="button" 
                 className="settings-nav-item"
@@ -237,7 +301,6 @@ export default function ProfileScreen() {
               </div>
             )}
 
-            {/* VIEW MODE */}
             {!isEditing ? (
               <div className="profile-view-container">
                 <div className="view-grid">
@@ -277,7 +340,6 @@ export default function ProfileScreen() {
                 </div>
               </div>
             ) : (
-              /* EDIT MODE */
               <form className="reference-form" onSubmit={handleSave}>
                 <div className="form-row-grid">
                   <div className="floating-field">
@@ -356,6 +418,52 @@ export default function ProfileScreen() {
           </main>
         </div>
       </div>
+
+      {/* CARTOON AVATAR SELECTION MODAL */}
+      {showAvatarPicker && (
+        <div className="avatar-modal-backdrop" onClick={() => setShowAvatarPicker(false)}>
+          <div className="avatar-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="avatar-modal-header">
+              <div>
+                <h3>{isKm ? 'ជ្រើសរើសរូបតុក្កតា' : 'Select Cartoon Avatar'}</h3>
+                <p>{isKm ? 'ជ្រើសរើសរូបតំណាងគំនូរជីវចលដែលអ្នកចូលចិត្ត' : 'Choose an animated profile avatar:'}</p>
+              </div>
+              <button 
+                type="button" 
+                className="avatar-close-btn" 
+                onClick={() => setShowAvatarPicker(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="cartoon-avatar-grid">
+              {CARTOON_AVATARS.map((avatar) => {
+                const isSelected = activeAvatar === avatar.url;
+                return (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    className={`cartoon-choice-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleSelectAvatar(avatar.url)}
+                    disabled={savingAvatar}
+                    title={avatar.label}
+                  >
+                    <div className="modal-avatar-img-wrap">
+                      <img src={avatar.url} alt={avatar.label} />
+                    </div>
+                    {isSelected && (
+                      <div className="avatar-check-indicator">
+                        <Check size={14} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </MobileAppShell>
   );
 }

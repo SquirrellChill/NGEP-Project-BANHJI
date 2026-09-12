@@ -16,13 +16,20 @@ export const logout = () => nodeApi.post('/auth/logout');
 
 export const getMe = () => nodeApi.get('/auth/me');
 
-export const updateMe = ({ firstName, lastName, phoneNumber, email }) =>
-  nodeApi.put('/auth/me', {
+export const updateMe = (data) => {
+  const firstName = data.firstName ?? data.first_name;
+  const lastName = data.lastName ?? data.last_name;
+  const phoneNumber = data.phoneNumber ?? data.phone_number;
+  const profilePicture = data.profilePicture ?? data.profile_picture;
+
+  return nodeApi.put('/auth/me', {
     first_name: firstName,
     last_name: lastName,
     phone_number: phoneNumber,
-    email: email || null,
+    email: data.email || null,
+    profile_picture: profilePicture ?? null,
   });
+};
 
 export const uploadAvatar = (file) => {
   const formData = new FormData();
@@ -40,13 +47,11 @@ export const changePassword = ({ currentPassword, newPassword }) =>
     new_password: newPassword,
   });
 
-// Standard flow: Send 6-digit OTP after verifying current password
 export const requestPasswordChangeOTP = ({ currentPassword }) =>
   nodeApi.post('/auth/change-password/request-otp', {
     current_password: currentPassword,
   });
 
-// Standard flow: Verify current password + OTP and set new password
 export const verifyChangePasswordWithOTP = ({ currentPassword, code, newPassword }) =>
   nodeApi.post('/auth/change-password/verify', {
     current_password: currentPassword,
@@ -54,11 +59,9 @@ export const verifyChangePasswordWithOTP = ({ currentPassword, code, newPassword
     new_password: newPassword,
   });
 
-// In-session reset: Verify registered email and send OTP to logged-in user
 export const requestForgotCurrentPasswordOTP = ({ email }) =>
   nodeApi.post('/auth/change-password/forgot-current-otp', { email });
 
-// In-session reset: Verify OTP and update password directly
 export const resetWithOtpAuthenticated = ({ code, newPassword }) =>
   nodeApi.post('/auth/change-password/reset-with-otp', {
     code,
