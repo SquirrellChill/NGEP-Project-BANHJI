@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ArrowLeft,
   Check,
@@ -56,7 +56,18 @@ export default function ProfileScreen() {
   
   const [mobileView, setMobileView] = useState('menu');
 
-  const activeAvatar = user?.profile_picture || CARTOON_AVATARS[0].url;
+  // Instant local avatar state so UI updates immediately without waiting for edge cache
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    () => user?.profile_picture || CARTOON_AVATARS[0].url
+  );
+
+  useEffect(() => {
+    if (user?.profile_picture) {
+      setSelectedAvatar(user.profile_picture);
+    }
+  }, [user?.profile_picture]);
+
+  const activeAvatar = selectedAvatar;
 
   const [form, setForm] = useState({
     firstName: profile.firstName || '',
@@ -95,7 +106,10 @@ export default function ProfileScreen() {
       });
       const updated = response.data?.data?.user;
       if (updated) {
-        updateUser(updated);
+        updateUser({
+          ...updated,
+          profile_picture: updated.profile_picture || activeAvatar,
+        });
       }
       setStatus({ 
         type: 'success', 
@@ -112,20 +126,27 @@ export default function ProfileScreen() {
 
   const handleSelectAvatar = async (avatarUrl) => {
     setSavingAvatar(true);
+    // 1. Optimistic Update: Change avatar on screen immediately
+    setSelectedAvatar(avatarUrl);
+
     try {
       const payload = {
         firstName: form.firstName || profile.firstName || '',
         lastName: form.lastName || profile.lastName || '',
         phoneNumber: form.phoneNumber || profile.phone || '',
-        email: form.email || profile.email || user.email,
+        email: form.email || profile.email || user?.email,
         profile_picture: avatarUrl,
       };
 
       const response = await updateMe(payload);
       const updatedUser = response?.data?.data?.user;
       
+      // 2. Ensure auth context persists selected avatar URL even if backend returns null
       if (updatedUser) {
-        updateUser(updatedUser);
+        updateUser({
+          ...updatedUser,
+          profile_picture: updatedUser.profile_picture || avatarUrl,
+        });
       } else {
         updateUser({ ...user, profile_picture: avatarUrl });
       }
@@ -137,6 +158,8 @@ export default function ProfileScreen() {
       });
     } catch (err) {
       console.error('Failed to update avatar:', err);
+      // Revert back on error
+      setSelectedAvatar(user?.profile_picture || CARTOON_AVATARS[0].url);
       setStatus({
         type: 'error',
         message: isKm ? 'មិនអាចប្តូររូបតំណាងបានទេ' : 'Unable to change avatar.',
